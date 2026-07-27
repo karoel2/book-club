@@ -1,0 +1,18 @@
+# build output
+dist/
+.astro/
+
+# dependencies
+node_modules/
+
+# ingest working files (screenshots stay local)
+inbox/
+
+# local tooling
+.claude/
+
+# misc
+.DS_Store
+*.log
+.env
+.env.production

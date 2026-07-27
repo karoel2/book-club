@@ -1,0 +1,44 @@
+---
+import Base from '../layouts/Base.astro';
+import BookRow from '../components/BookRow.astro';
+import { getBooks } from '../data/books';
+
+const books = getBooks();
+const count = books.length;
+---
+
+<Base title="Klub Książki — Ranking">
+  <header class="site-header container">
+    <p class="eyebrow">Nasz klub książki</p>
+    <h1 class="site-title">Ranking przeczytanych książek</h1>
+    <p class="site-tagline">
+      Wszystkie {count} książek, które razem przeczytaliśmy — od najwyżej do najniżej
+      ocenianych, z oceną każdego z nas.
+    </p>
+  </header>
+
+  <main class="container">
+    <ol class="leaderboard" role="list">
+      {books.map((book, i) => <BookRow book={book} rank={i + 1} />)}
+    </ol>
+  </main>
+
+  <footer class="site-footer container">
+    <hr class="divider" />
+    <p>Średnia liczona z ocen członków. Kliknij książkę, aby zobaczyć szczegóły.</p>
+  </footer>
+</Base>
+
+<style>
+  .leaderboard {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .site-footer .divider {
+    margin-bottom: 1.5rem;
+  }
+</style>

@@ -1,0 +1,72 @@
+[
+  {
+    "title": "Chirurg",
+    "author": "Tess Gerritsen",
+    "scores": { "Asia": 5, "Michał": 9, "Karolina": 7, "Bartek": 8, "Jaśmin": 9, "Zosia": 7, "Sara": 9 }
+  },
+  {
+    "title": "Kwiaty dla Algernona",
+    "author": null,
+    "scores": { "Asia": 7, "Michał": 6, "Zosia": 8, "Karol": 7, "Sara": 7, "Jaśmin": 8 }
+  },
+  {
+    "title": "Yumi i Malarz Koszmarów",
+    "author": "B. Sanderson",
+    "scores": { "Zosia": 8, "Agata": 7, "Piotr": 7, "Karol": 3, "Paweł": 7, "Asia": 5, "Nicole": 5 }
+  },
+  {
+    "title": "Pierwszych piętnaście żywotów Harrego Augusta",
+    "author": "C. North",
+    "scores": { "Paweł": 8, "Piotr": 7, "Nicole": 3, "Agata": 7, "Karol": 5, "Kasia": 2, "Asia": 5, "Sara": 5 }
+  },
+  {
+    "title": "Wiedźmin",
+    "author": "A. Sapkowski",
+    "scores": { "Karol": 8, "Bartek": 8, "Jaśmin": 8, "Nicole": 8, "Kasia": 8, "Sara": 8 }
+  },
+  {
+    "title": "Droga do szczęścia",
+    "author": null,
+    "scores": { "Karolina": 6, "Paulina": 5, "Asia": 7, "Nicole": 4, "Zosia": null, "Jaśmin": 6, "Sara": 5 }
+  },
+  {
+    "title": "Śnieg przykryje",
+    "author": null,
+    "scores": { "Nicole": 7, "Karolina": 7, "Asia": 6, "Karol": 6, "Bartek": 7, "Jaśmin": 7, "Zosia": 8, "Paweł": 10, "Paulina": 8, "Sara": 7 }
+  },
+  {
+    "title": "Hail Mary",
+    "author": "A. Weir",
+    "scores": { "Paweł": 10, "Zosia": 9, "Nicole": 9, "Karolina": 8, "Karol": 9, "Bartek": 8, "Jaśmin": 9, "Asia": 9, "Paulina": 10, "Kasia": 9, "Piotr": 8, "Agata": 8, "Sara": 8 }
+  },
+  {
+    "title": "Wyznania",
+    "author": "Kanae Minato",
+    "scores": { "Paulina": 6, "Asia": 6, "Jaśmin": 9, "Bartek": 8, "Nicole": 7, "Zosia": 8, "Paweł": 8, "Karol": 7, "Sara": 6 }
+  },
+  {
+    "title": "Dziki, mroczny brzeg",
+    "author": "C. McConaghy",
+    "scores": { "Zosia": 6, "Paweł": 3, "Karol": 6, "Paulina": 7, "Jaśmin": 7, "Bartek": 7, "Karolina": 6, "Asia": 4, "Sara": 7, "Kasia": 4 }
+  },
+  {
+    "title": "Achaja",
+    "author": "Ziemiański",
+    "scores": { "Karol": 9, "Sara": 6, "Michał": 8, "Zosia": 6, "Paweł": 6 }
+  },
+  {
+    "title": "Płonące Dziewczyny",
+    "author": "C.J. Tudor",
+    "scores": { "Bartek": 6, "Paweł": 7, "Zosia": 7, "Michał": 7, "Karol": 6, "Sara": 6 }
+  },
+  {
+    "title": "Worek Kości",
+    "author": "S. King",
+    "scores": { "Zosia": 5, "Asia": 5, "Karol": 3, "Michał": 8, "Karolina": 3 }
+  },
+  {
+    "title": "Nie ma tego złego",
+    "author": "M. Mortka",
+    "scores": { "Michał": 6, "Nicole": 7, "Asia": 7, "Karol": 5, "Sara": 7 }
+  }
+]

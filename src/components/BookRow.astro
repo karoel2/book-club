@@ -1,0 +1,111 @@
+---
+import BookCover from './BookCover.astro';
+import ScoreBadge from './ScoreBadge.astro';
+import { ratingsLabel, type Book } from '../data/books';
+import { url } from '../lib/url';
+
+interface Props {
+  book: Book;
+  rank: number;
+  /** override the badge value (e.g. one member's score); defaults to the book average */
+  score?: number;
+  /** override the badge label; defaults to the formatted average */
+  scoreLabel?: string;
+  /** override the right-hand side of the sub-line; defaults to "N ocen" */
+  context?: string;
+}
+
+const { book, rank, score, scoreLabel, context } = Astro.props;
+const badgeValue = score ?? book.average;
+const badgeLabel = scoreLabel ?? book.averageLabel;
+const contextText = context ?? `${book.ratingsCount} ${ratingsLabel(book.ratingsCount)}`;
+---
+
+<li class="row">
+  <a class="row-link" href={url(`/books/${book.slug}`)}>
+    <span class="rank" aria-hidden="true">{rank}</span>
+    <BookCover slug={book.slug} title={book.title} author={book.author} variant="thumb" />
+    <span class="meta">
+      <span class="title">{book.title}</span>
+      <span class="sub">
+        {book.author ? book.author : 'Autor nieznany'}
+        <span class="dot">·</span>
+        {contextText}
+      </span>
+    </span>
+    {
+      badgeValue !== null ? (
+        <ScoreBadge value={badgeValue} label={badgeLabel} size="lg" />
+      ) : (
+        <span class="no-avg">—</span>
+      )
+    }
+  </a>
+</li>
+
+<style>
+  .row {
+    list-style: none;
+  }
+  .row-link {
+    display: flex;
+    align-items: center;
+    gap: clamp(0.75rem, 2.5vw, 1.25rem);
+    padding: 0.75rem clamp(0.75rem, 2.5vw, 1.25rem);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    transition:
+      transform 0.15s ease,
+      box-shadow 0.15s ease,
+      border-color 0.15s ease;
+  }
+  .row-link:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-hover);
+    border-color: var(--line-strong);
+  }
+  .rank {
+    font-family: var(--font-serif);
+    font-size: 1.15rem;
+    color: var(--muted);
+    min-width: 1.6rem;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+  .meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+    flex: 1;
+  }
+  .title {
+    font-family: var(--font-serif);
+    font-size: clamp(1.05rem, 2.6vw, 1.3rem);
+    font-weight: 600;
+    line-height: 1.2;
+  }
+  .sub {
+    color: var(--muted);
+    font-size: 0.88rem;
+  }
+  .dot {
+    margin-inline: 0.35rem;
+    opacity: 0.6;
+  }
+  .no-avg {
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 1.4rem;
+    min-width: 3.4rem;
+    text-align: center;
+  }
+
+  @media (max-width: 30rem) {
+    .rank {
+      min-width: 1.1rem;
+      font-size: 1rem;
+    }
+  }
+</style>

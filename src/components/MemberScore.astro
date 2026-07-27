@@ -1,0 +1,85 @@
+---
+import ScoreBadge from './ScoreBadge.astro';
+import { getMemberSlug } from '../data/books';
+import { url } from '../lib/url';
+
+interface Props {
+  name: string;
+  score: number | null;
+}
+
+const { name, score } = Astro.props;
+const href = url(`/members/${getMemberSlug(name)}`);
+---
+
+<li class="member-item">
+  <a class="member" href={href}>
+    <span class="member-name">{name}</span>
+    <span class="leader" aria-hidden="true"></span>
+    {
+      score === null ? (
+        <span class="member-na" title="Brak oceny">—</span>
+      ) : (
+        <ScoreBadge value={score} label={String(score)} size="sm" />
+      )
+    }
+    <span class="chev" aria-hidden="true">›</span>
+  </a>
+</li>
+
+<style>
+  .member-item {
+    border-bottom: 1px solid var(--line);
+  }
+  .member-item:last-child {
+    border-bottom: 0;
+  }
+  .member {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0.5rem;
+    margin-inline: -0.5rem;
+    border-radius: var(--radius-sm);
+    transition: background 0.12s ease;
+  }
+  .member:hover,
+  .member:focus-visible {
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+  }
+  .member-name {
+    font-weight: 500;
+  }
+  .member:hover .member-name,
+  .member:focus-visible .member-name {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .leader {
+    flex: 1;
+    border-bottom: 1px dotted var(--line-strong);
+    transform: translateY(-0.15em);
+  }
+  .member-na {
+    color: var(--muted);
+    font-weight: 600;
+    min-width: 2.1rem;
+    text-align: center;
+  }
+  .chev {
+    color: var(--muted);
+    font-size: 1.15rem;
+    line-height: 1;
+    width: 0.5rem;
+    text-align: center;
+    opacity: 0.45;
+    transition:
+      transform 0.12s ease,
+      opacity 0.12s ease;
+  }
+  .member:hover .chev,
+  .member:focus-visible .chev {
+    opacity: 1;
+    transform: translateX(2px);
+  }
+</style>

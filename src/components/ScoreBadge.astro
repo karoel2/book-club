@@ -1,0 +1,53 @@
+---
+import { scoreColor } from '../lib/score-color';
+import { formatScore } from '../data/books';
+
+interface Props {
+  /** numeric value that drives the colour (e.g. the average) */
+  value: number;
+  /** text to display; defaults to the Polish-formatted value */
+  label?: string;
+  size?: 'sm' | 'md' | 'lg';
+}
+
+const { value, label, size = 'md' } = Astro.props;
+const c = scoreColor(value);
+const text = label ?? formatScore(value);
+---
+
+<span
+  class:list={['score-badge', size]}
+  style={`--sb-bg:${c.bg};--sb-fg:${c.fg};--sb-border:${c.border}`}
+>{text}</span>
+
+<style>
+  .score-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    color: var(--sb-fg);
+    background: var(--sb-bg);
+    border: 1px solid var(--sb-border);
+    border-radius: 999px;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .sm {
+    font-size: 0.9rem;
+    padding: 0.3rem 0.55rem;
+    min-width: 2.1rem;
+  }
+  .md {
+    font-size: 1.05rem;
+    padding: 0.4rem 0.7rem;
+    min-width: 2.5rem;
+  }
+  .lg {
+    font-family: var(--font-serif);
+    font-size: 1.6rem;
+    padding: 0.55rem 1rem;
+    min-width: 3.4rem;
+  }
+</style>

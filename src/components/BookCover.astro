@@ -1,0 +1,119 @@
+---
+import { Image } from 'astro:assets';
+
+interface Props {
+  slug: string;
+  title: string;
+  author?: string | null;
+  variant?: 'thumb' | 'full';
+}
+
+const { slug, title, author, variant = 'thumb' } = Astro.props;
+
+// Drop a real cover into src/assets/covers/<slug>.(jpg|png|webp|avif) and it is
+// picked up automatically on the next build; otherwise an intentional
+// placeholder is rendered (never a broken image).
+const covers = import.meta.glob<{ default: ImageMetadata }>(
+  '/src/assets/covers/*.{jpg,jpeg,png,webp,avif}',
+  { eager: true },
+);
+const match = Object.entries(covers).find(([path]) => {
+  const base = path.split('/').pop()!.replace(/\.[^.]+$/, '');
+  return base === slug;
+});
+const cover = match?.[1].default;
+
+// deterministic tint so each placeholder looks intentional and stable
+let hash = 0;
+for (const ch of slug) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+const hue = hash % 360;
+const initial = title.trim().charAt(0).toUpperCase();
+---
+
+<div
+  class:list={['cover', variant, { 'is-placeholder': !cover }]}
+  style={`--ph-h:${hue}`}
+  {...!cover ? { role: 'img', 'aria-label': `Okładka „${title}” (zastępcza)` } : {}}
+>
+  {
+    cover ? (
+      <Image
+        class="cover-img"
+        src={cover}
+        alt={`Okładka „${title}”`}
+        width={variant === 'full' ? 460 : 120}
+      />
+    ) : variant === 'full' ? (
+      <div class="ph-body">
+        <span class="ph-title">{title}</span>
+        {author && <span class="ph-author">{author}</span>}
+      </div>
+    ) : (
+      <span class="ph-initial" aria-hidden="true">{initial}</span>
+    )
+  }
+</div>
+
+<style>
+  .cover {
+    aspect-ratio: 2 / 3;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    flex: none;
+  }
+  .cover.thumb {
+    width: 46px;
+  }
+  .cover.full {
+    width: 100%;
+  }
+  .cover-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .is-placeholder {
+    background: linear-gradient(
+      158deg,
+      hsl(var(--ph-h) 32% 95%),
+      hsl(var(--ph-h) 26% 87%)
+    );
+    border: 1px solid hsl(var(--ph-h) 22% 82%);
+    box-shadow: var(--shadow);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .ph-initial {
+    font-family: var(--font-serif);
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: hsl(var(--ph-h) 30% 32%);
+  }
+  .ph-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 12% 11%;
+    width: 100%;
+    height: 100%;
+    justify-content: flex-end;
+  }
+  .ph-title {
+    font-family: var(--font-serif);
+    font-size: clamp(1.1rem, 4.5cqw, 1.6rem);
+    font-weight: 600;
+    line-height: 1.15;
+    color: hsl(var(--ph-h) 32% 24%);
+  }
+  .ph-author {
+    font-size: 0.95rem;
+    color: hsl(var(--ph-h) 18% 38%);
+  }
+  .cover.full.is-placeholder {
+    container-type: inline-size;
+  }
+</style>
