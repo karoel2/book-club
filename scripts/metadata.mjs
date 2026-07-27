@@ -4,8 +4,13 @@
  * Primary source  : Google Books   (rich Polish descriptions + categories)
  * Fallback / cover : Open Library   (higher-res covers by ISBN, subjects)
  *
- * Nothing here throws for "not found" — callers get partial data or null and
- * carry on. Set GOOGLE_BOOKS_API_KEY to raise Google's rate limit (optional).
+ * Matching is deliberately strict: we only accept a result when the author
+ * matches (or, when the book has no author, when the title matches closely),
+ * so a wrong book's blurb is never attached. A miss leaves the field blank for
+ * you to fill in by hand.
+ *
+ * Env: GOOGLE_BOOKS_API_KEY (optional, raises the limit),
+ *      GOOGLE_BOOKS_COUNTRY (default "PL"; the volumes endpoint requires it).
  */
 import { writeFileSync } from 'node:fs';
 
@@ -52,47 +57,71 @@ function norm(s = '') {
     .trim();
 }
 
-// Loose title match so we don't attach the wrong book's blurb.
-function titlesMatch(a, b) {
-  const na = norm(a);
-  const nb = norm(b);
-  if (!na || !nb) return false;
-  if (na === nb || na.includes(nb) || nb.includes(na)) return true;
-  const ta = new Set(na.split(' '));
-  const tb = nb.split(' ');
-  const overlap = tb.filter((w) => ta.has(w)).length;
-  return overlap >= Math.max(1, Math.ceil(tb.length * 0.6));
+function tokenOverlap(a, b) {
+  const ta = a.split(' ').filter(Boolean);
+  const sb = new Set(b.split(' ').filter(Boolean));
+  if (!ta.length) return 0;
+  return ta.filter((t) => sb.has(t)).length / ta.length;
+}
+
+// Accept a candidate only when we're reasonably sure it's the same book.
+function accept(qTitle, qAuthor, resTitle, resAuthors) {
+  const nt = norm(qTitle);
+  const nr = norm(resTitle);
+  if (!nt || !nr) return false;
+  const titleClose = nt === nr || nr.includes(nt) || nt.includes(nr);
+  const overlap = tokenOverlap(nt, nr);
+  if (qAuthor) {
+    const sur = norm(authorSurname(qAuthor));
+    const authorMatch = sur.length > 1 && (resAuthors || []).some((a) => norm(a).includes(sur));
+    return authorMatch && (titleClose || overlap >= 0.5);
+  }
+  // No author to disambiguate on — demand a strong title match.
+  return titleClose || overlap >= 0.8;
 }
 
 async function fromGoogle(title, author) {
   const key = process.env.GOOGLE_BOOKS_API_KEY;
-  const q = encodeURIComponent([title, authorSurname(author)].filter(Boolean).join(' '));
-  const base = `https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=5&printType=books${key ? `&key=${key}` : ''}`;
-  for (const lang of ['&langRestrict=pl', '']) {
-    let data;
-    try {
-      data = await getJson(base + lang);
-    } catch {
-      continue;
+  const country = process.env.GOOGLE_BOOKS_COUNTRY || 'PL';
+  const surname = authorSurname(author);
+  const T = title.replace(/"/g, '');
+  const S = surname.replace(/"/g, '');
+
+  const queries = [];
+  if (surname) queries.push(`intitle:"${T}" inauthor:"${S}"`);
+  queries.push(`intitle:"${T}"`);
+  queries.push([title, surname].filter(Boolean).join(' '));
+
+  for (const q of queries) {
+    for (const lang of ['&langRestrict=pl', '']) {
+      const url =
+        `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}` +
+        `&maxResults=5&printType=books&country=${country}${lang}${key ? `&key=${key}` : ''}`;
+      let data;
+      try {
+        data = await getJson(url);
+      } catch {
+        continue;
+      }
+      const items = data.items || [];
+      const hit = items.find((it) => accept(title, author, it.volumeInfo?.title || '', it.volumeInfo?.authors));
+      if (!hit) continue;
+      const vi = hit.volumeInfo || {};
+      const ids = vi.industryIdentifiers || [];
+      const isbn =
+        ids.find((i) => i.type === 'ISBN_13')?.identifier ||
+        ids.find((i) => i.type === 'ISBN_10')?.identifier ||
+        null;
+      const img = vi.imageLinks || {};
+      const cover = img.extraLarge || img.large || img.medium || img.small || img.thumbnail || img.smallThumbnail;
+      return {
+        description: vi.description ? stripHtml(vi.description) : null,
+        categories: cleanCategories(vi.categories || []),
+        isbn,
+        coverUrls: cover ? [cover.replace(/^http:/, 'https:').replace(/&edge=curl/, '')] : [],
+        source: 'Google Books',
+      };
     }
-    const items = data.items || [];
-    const hit = items.find((it) => titlesMatch(it.volumeInfo?.title || '', title)) || items[0];
-    if (!hit) continue;
-    const vi = hit.volumeInfo || {};
-    const ids = vi.industryIdentifiers || [];
-    const isbn =
-      ids.find((i) => i.type === 'ISBN_13')?.identifier ||
-      ids.find((i) => i.type === 'ISBN_10')?.identifier ||
-      null;
-    const img = vi.imageLinks || {};
-    const cover = img.extraLarge || img.large || img.medium || img.small || img.thumbnail || img.smallThumbnail;
-    return {
-      description: vi.description ? stripHtml(vi.description) : null,
-      categories: cleanCategories(vi.categories || []),
-      isbn,
-      coverUrls: cover ? [cover.replace(/^http:/, 'https:').replace(/&edge=curl/, '')] : [],
-      source: 'Google Books',
-    };
   }
   return null;
 }
@@ -107,8 +136,7 @@ async function fromOpenLibrary(title, author) {
   } catch {
     return null;
   }
-  const docs = data.docs || [];
-  const hit = docs.find((d) => titlesMatch(d.title || '', title)) || docs[0];
+  const hit = (data.docs || []).find((d) => accept(title, author, d.title || '', d.author_name));
   if (!hit) return null;
 
   let description = null;
@@ -126,13 +154,7 @@ async function fromOpenLibrary(title, author) {
   const coverUrls = [];
   if (hit.cover_i) coverUrls.push(`https://covers.openlibrary.org/b/id/${hit.cover_i}-L.jpg`);
   if (isbn) coverUrls.push(`https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg`);
-  return {
-    description,
-    categories: cleanCategories(hit.subject || []),
-    isbn,
-    coverUrls,
-    source: 'Open Library',
-  };
+  return { description, categories: cleanCategories(hit.subject || []), isbn, coverUrls, source: 'Open Library' };
 }
 
 /** Merge Google Books (preferred for text) with Open Library (covers/fallback). */

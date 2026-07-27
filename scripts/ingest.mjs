@@ -17,13 +17,15 @@
  *   node scripts/ingest.mjs [images...]   process given images (or scan inbox/)
  *   node scripts/ingest.mjs --dry-run img parse + preview metadata, change nothing
  *   node scripts/ingest.mjs --push        add + git commit + git push
- *   node scripts/ingest.mjs --backfill    enrich existing books that lack metadata
- *   node scripts/ingest.mjs --no-enrich   skip the description/category/cover lookup
- *   node scripts/ingest.mjs --strict      send even advisory-flagged books to review/
+ *   node scripts/ingest.mjs --backfill        enrich existing books that lack metadata
+ *   node scripts/ingest.mjs --backfill "wied" enrich only books whose title matches
+ *   node scripts/ingest.mjs --backfill --force  re-fetch even if data already present
+ *   node scripts/ingest.mjs --no-enrich       skip the description/category/cover lookup
+ *   node scripts/ingest.mjs --strict          send even advisory-flagged books to review/
  */
 
 import {
-  readFileSync, writeFileSync, readdirSync, mkdirSync, copyFileSync, renameSync, existsSync,
+  readFileSync, writeFileSync, readdirSync, mkdirSync, copyFileSync, renameSync, existsSync, unlinkSync,
 } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -76,6 +78,9 @@ function memberKey(s) {
 
 function log(...m) { console.log(...m); }
 function hasCover(slug) { return COVER_EXT.some((e) => existsSync(join(COVERS, `${slug}.${e}`))); }
+function removeCover(slug) {
+  for (const e of COVER_EXT) { const p = join(COVERS, `${slug}.${e}`); if (existsSync(p)) try { unlinkSync(p); } catch { /* ignore */ } }
+}
 
 function runOcr(imgPath) {
   const out = execFileSync('swift', [OCR_SWIFT, imgPath], { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 });
@@ -231,7 +236,14 @@ function moveTo(dir, imgPath, sidecar) {
 }
 
 // Fill in description / categories / cover for one entry (mutates it). Best-effort.
-async function enrich(entry, slug) {
+// With force=true, overwrites existing fields and re-downloads the cover.
+async function enrich(entry, slug, force = false) {
+  // Without an author, titles like "Droga do szczęścia" are ambiguous (several
+  // different books share them), so we don't guess. Add the author and re-run.
+  if (!entry.author) {
+    log('      · pomijam (brak autora) — dodaj autora w books.json, potem: npm run ingest -- --backfill --force "<fragment tytułu>"');
+    return;
+  }
   let meta;
   try {
     meta = await fetchMetadata(entry.title, entry.author);
@@ -239,17 +251,22 @@ async function enrich(entry, slug) {
     log(`      · wzbogacanie nie powiodło się: ${e.message}`);
     return;
   }
-  if (!meta) { log('      · brak metadanych (nie znaleziono książki)'); return; }
+  if (!meta) {
+    log('      · nie znaleziono — popraw tytuł/autora w books.json, potem: npm run ingest -- --backfill "<fragment tytułu>"');
+    return;
+  }
 
-  if (meta.description && !entry.description) entry.description = meta.description;
-  if (meta.categories?.length && !(entry.categories && entry.categories.length)) entry.categories = meta.categories;
+  if (meta.description && (force || !entry.description)) entry.description = meta.description;
+  if (meta.categories?.length && (force || !(entry.categories && entry.categories.length))) entry.categories = meta.categories;
 
   let coverMsg = 'brak okładki';
-  if (hasCover(slug)) {
-    coverMsg = 'okładka już jest (pomijam)';
-  } else if (meta.coverUrls.length && !DRY) {
+  const coverExists = hasCover(slug);
+  if (meta.coverUrls.length && !DRY && (force || !coverExists)) {
+    if (force && coverExists) removeCover(slug);
     const dest = await downloadBestCover(meta.coverUrls, join(COVERS, slug));
     coverMsg = dest ? `okładka -> ${basename(dest)}` : 'nie udało się pobrać okładki';
+  } else if (coverExists) {
+    coverMsg = 'okładka już jest (pomijam)';
   } else if (meta.coverUrls.length && DRY) {
     coverMsg = `${meta.coverUrls.length} kandydatów na okładkę`;
   }
@@ -280,23 +297,28 @@ function gitPush(subject) {
 /* ------------------------------ main ------------------------------- */
 
 async function backfill(books) {
+  const force = args.includes('--force');
+  const targets = explicit.map((s) => s.toLowerCase()); // optional title fragments
   let changed = 0;
   for (const b of books) {
+    if (targets.length && !targets.some((t) => b.title.toLowerCase().includes(t))) continue;
     const slug = slugify(b.title);
-    const needs = !b.description || !(b.categories && b.categories.length) || !hasCover(slug);
-    if (!needs) continue;
+    const missing = !b.description || !(b.categories && b.categories.length) || !hasCover(slug);
+    if (!force && !missing) continue;
     log(`▶ ${b.title}`);
     if (!b.categories) b.categories = [];
-    if (ENRICH) await enrich(b, slug);
+    if (ENRICH) await enrich(b, slug, force);
     changed += 1;
   }
   if (changed && !DRY) {
     writeFileSync(DATA, serializeBooks(books));
-    log(`\n✓ Uzupełniono metadane dla ${changed} książki/ek.`);
-    if (PUSH) gitPush(`Uzupełniono metadane (${changed})`);
+    log(`\n✓ Zaktualizowano ${changed} książkę/ek.`);
+    if (PUSH) gitPush(`Metadane książek (${changed})`);
     else log('  (uruchom z --push, aby zatwierdzić i wypchnąć)');
   } else if (!changed) {
-    log('\nWszystkie książki mają już komplet metadanych.');
+    log(targets.length
+      ? '\nNie znaleziono pasujących książek (lub mają już komplet danych — użyj --force, aby odświeżyć).'
+      : '\nWszystkie książki mają już komplet metadanych (użyj --force, aby odświeżyć).');
   } else {
     log('\n[dry-run] Nic nie zapisano.');
   }

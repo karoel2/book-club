@@ -89,6 +89,23 @@ npm run ingest -- --backfill --push     # + commit & push
 Covers land in `src/assets/covers/<slug>.jpg` and are used automatically. To
 override any cover, just drop your own image there with the same slug.
 
+### Fixing data by hand
+
+Reliable matching needs an author, so books with `"author": null` — and any
+whose title the lookup can't find — are left blank **on purpose** (no guessing,
+so a wrong book's blurb is never attached). To fix one:
+
+1. Correct its `title` / `author` in `src/data/books.json`.
+2. Re-enrich just that book, overwriting whatever was there:
+
+   ```bash
+   npm run ingest -- --backfill --force "fragment tytułu"
+   ```
+
+`--force` re-fetches text and re-downloads the cover even if data is already
+present; the title fragment limits the run to matching books. Omit both the
+fragment and `--force` to sweep every book that's still missing something.
+
 ## Run it on a schedule (cron)
 
 `scripts/cron-ingest.sh` runs the ingest with `--push` and logs to `inbox/ingest.log`.
