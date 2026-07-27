@@ -31,6 +31,20 @@ function stripHtml(s = '') {
     .trim();
 }
 
+// Strip HTML plus the junk crowd-sourced descriptions often carry: inline
+// markdown links, reference-style footnotes, and bare URLs (e.g. Open Library's
+// "[... PDF](spam-url)" trailers).
+function cleanDescription(s = '') {
+  return stripHtml(s)
+    .replace(/\[[^\]]*\]\([^)]*\)/g, '')
+    .replace(/^\s*\[\d+\]:\s*\S+.*$/gm, '')
+    .replace(/\bhttps?:\/\/\S+/gi, '')
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 function cleanCategories(cats = []) {
   const out = [];
   for (const c of cats) {
@@ -115,7 +129,7 @@ async function fromGoogle(title, author) {
       const img = vi.imageLinks || {};
       const cover = img.extraLarge || img.large || img.medium || img.small || img.thumbnail || img.smallThumbnail;
       return {
-        description: vi.description ? stripHtml(vi.description) : null,
+        description: vi.description ? cleanDescription(vi.description) : null,
         categories: cleanCategories(vi.categories || []),
         isbn,
         coverUrls: cover ? [cover.replace(/^http:/, 'https:').replace(/&edge=curl/, '')] : [],
@@ -145,7 +159,7 @@ async function fromOpenLibrary(title, author) {
       const work = await getJson(`https://openlibrary.org${hit.key}.json`);
       const d = work.description;
       description = typeof d === 'string' ? d : d?.value || null;
-      if (description) description = stripHtml(description).replace(/\s*\(\[source\]\[\d+\]\).*$/s, '').trim();
+      if (description) description = cleanDescription(description);
     } catch {
       /* description is optional */
     }

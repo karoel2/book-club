@@ -66,7 +66,17 @@ if (!book) throw new Error(`Nie znaleziono książki dla slug: ${slug}`);
       book.description && (
         <section class="desc" aria-labelledby="desc-heading">
           <h2 id="desc-heading" class="desc-title">Opis</h2>
-          <p class="desc-text">{book.description}</p>
+          {
+            book.description.length > 300 ? (
+              <div class="desc-collapse">
+                <input type="checkbox" id="desc-toggle" class="desc-toggle-input" />
+                <p class="desc-text is-clamped">{book.description}</p>
+                <label for="desc-toggle" class="desc-toggle-label" />
+              </div>
+            ) : (
+              <p class="desc-text">{book.description}</p>
+            )
+          }
           <p class="desc-src">Opis i kategorie: Google Books / Open Library</p>
         </section>
       )
@@ -157,6 +167,47 @@ if (!book) throw new Error(`Nie znaleziono książki dla slug: ${slug}`);
     margin: 0;
     line-height: 1.7;
     white-space: pre-line;
+  }
+  /* Collapsed preview + CSS-only "read more" toggle (no JS needed). */
+  .desc-text.is-clamped {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    overflow: hidden;
+  }
+  .desc-toggle-input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  .desc-toggle-input:checked ~ .desc-text.is-clamped {
+    display: block;
+    -webkit-line-clamp: unset;
+    line-clamp: unset;
+    overflow: visible;
+  }
+  .desc-toggle-label {
+    display: inline-block;
+    margin-top: 0.6rem;
+    color: var(--accent);
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .desc-toggle-label::after {
+    content: 'Czytaj więcej';
+  }
+  .desc-toggle-input:checked ~ .desc-toggle-label::after {
+    content: 'Zwiń';
+  }
+  .desc-toggle-label:hover {
+    text-decoration: underline;
+  }
+  .desc-toggle-input:focus-visible ~ .desc-toggle-label {
+    outline: 2.5px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 4px;
   }
   .desc-src {
     margin: 0.9rem 0 0;
