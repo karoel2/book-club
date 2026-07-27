@@ -6,6 +6,10 @@ export interface RawBook {
   author: string | null;
   /** member name -> score 1..10, or null = took part but left no score */
   scores: Record<string, number | null>;
+  /** short blurb (from Google Books / Open Library); optional */
+  description?: string | null;
+  /** genre/category tags; optional */
+  categories?: string[];
 }
 
 export interface MemberScore {
@@ -25,6 +29,8 @@ export interface Book {
   averageLabel: string;
   /** how many members actually gave a number */
   ratingsCount: number;
+  description: string | null;
+  categories: string[];
 }
 
 const PL_DIACRITICS: Record<string, string> = {
@@ -94,6 +100,8 @@ function buildBook(raw: RawBook, usedSlugs: Set<string>): Book {
     average,
     averageLabel: average === null ? '—' : formatScore(average),
     ratingsCount,
+    description: raw.description ?? null,
+    categories: raw.categories ?? [],
   };
 }
 

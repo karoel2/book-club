@@ -40,7 +40,8 @@ The slug is the lowercase title with Polish letters simplified and spaces turned
 ## Add a book automatically (from a screenshot)
 
 `scripts/ingest.mjs` turns a screenshot into a `books.json` entry: OCR (on-device
-Apple Vision, via `ocr.swift`) → parse → validate → append.
+Apple Vision, via `ocr.swift`) → parse → validate → enrich (description, categories,
+cover) → append.
 
 ```bash
 # 1. Drop screenshot(s) into inbox/
@@ -62,10 +63,31 @@ What it handles for you:
   published — so a misread score never reaches the site silently.
 - Best-effort title/author split; when unsure it keeps the whole line as the
   title and leaves the author blank for you to fix later.
+- Fetches a **description, categories and a cover image** for each new book and
+  drops the cover into `src/assets/covers/` (add `--no-enrich` to skip).
 - Skips books whose slug already exists, so re-running is safe.
 
 Processed images move to `inbox/processed/`, flagged ones to `inbox/review/`.
 Add `--strict` to send anything with any warning to review.
+
+## Book descriptions, categories & covers
+
+Enrichment uses **Google Books** (best Polish descriptions + categories) with
+**Open Library** as a fallback and for higher-resolution covers (by ISBN). It's
+best-effort — if nothing is found the book is still added, just without extras.
+No API key is needed; set `GOOGLE_BOOKS_API_KEY` if you ever hit the daily limit.
+
+Backfill the books you already have (fills only what's missing — description,
+categories, or cover — so it's safe to re-run):
+
+```bash
+npm run ingest -- --backfill --dry-run  # preview what it would fetch
+npm run ingest -- --backfill            # write metadata + download covers
+npm run ingest -- --backfill --push     # + commit & push
+```
+
+Covers land in `src/assets/covers/<slug>.jpg` and are used automatically. To
+override any cover, just drop your own image there with the same slug.
 
 ## Run it on a schedule (cron)
 

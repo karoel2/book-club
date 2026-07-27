@@ -32,6 +32,7 @@ const contextText = context ?? `${book.ratingsCount} ${ratingsLabel(book.ratings
         <span class="dot">·</span>
         {contextText}
       </span>
+      {book.categories.length > 0 && <span class="row-cat">{book.categories[0]}</span>}
     </span>
     {
       badgeValue !== null ? (
@@ -89,6 +90,16 @@ const contextText = context ?? `${book.ratingsCount} ${ratingsLabel(book.ratings
   .sub {
     color: var(--muted);
     font-size: 0.88rem;
+  }
+  .row-cat {
+    align-self: flex-start;
+    margin-top: 0.3rem;
+    font-size: 0.72rem;
+    color: var(--muted);
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 0.15rem 0.5rem;
   }
   .dot {
     margin-inline: 0.35rem;

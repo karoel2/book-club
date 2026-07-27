@@ -1,22 +1,25 @@
 #!/usr/bin/env node
 /**
- * Ingest a book-club screenshot into the website.
+ * Ingest a book-club screenshot into the website, with metadata enrichment.
  *
  *   1. OCR the image with the on-device Apple Vision engine (../ocr.swift)
  *   2. Parse it into one or more books: title/author + { member: score }
- *   3. Canonicalise member names against the existing roster (fixes the
- *      OCR "ł -> t" confusion, e.g. Michat -> Michał, Pawet -> Paweł)
- *   4. Cross-check the parsed scores against the average printed on the
- *      screenshot — if they disagree, the scores were probably misread
- *   5. Append clean entries to src/data/books.json; anything uncertain is
- *      copied to inbox/review/ with a note and is NOT published
- *   6. Optionally commit & push (which triggers the host to rebuild)
+ *   3. Canonicalise member names against the roster (fixes OCR "ł -> t",
+ *      e.g. Michat -> Michał, Pawet -> Paweł)
+ *   4. Cross-check parsed scores against the average printed on the screenshot
+ *   5. Enrich each new book with a description, categories and a cover image
+ *      (Google Books + Open Library) — best effort, never blocks the add
+ *   6. Append clean entries to src/data/books.json; anything uncertain is
+ *      copied to inbox/review/ and is NOT published
+ *   7. Optionally commit & push (which triggers the host to rebuild)
  *
  * Usage:
- *   node scripts/ingest.mjs [images...]      process given images (or scan inbox/)
- *   node scripts/ingest.mjs --dry-run img    parse & print, change nothing
- *   node scripts/ingest.mjs --push           add + git commit + git push
- *   node scripts/ingest.mjs --strict         send even advisory-flagged books to review/
+ *   node scripts/ingest.mjs [images...]   process given images (or scan inbox/)
+ *   node scripts/ingest.mjs --dry-run img parse + preview metadata, change nothing
+ *   node scripts/ingest.mjs --push        add + git commit + git push
+ *   node scripts/ingest.mjs --backfill    enrich existing books that lack metadata
+ *   node scripts/ingest.mjs --no-enrich   skip the description/category/cover lookup
+ *   node scripts/ingest.mjs --strict      send even advisory-flagged books to review/
  */
 
 import {
@@ -25,6 +28,7 @@ import {
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve, basename, extname } from 'node:path';
+import { fetchMetadata, downloadBestCover } from './metadata.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
@@ -33,12 +37,16 @@ const OCR_SWIFT = join(ROOT, 'ocr.swift');
 const INBOX = join(ROOT, 'inbox');
 const PROCESSED = join(INBOX, 'processed');
 const REVIEW = join(INBOX, 'review');
+const COVERS = join(ROOT, 'src', 'assets', 'covers');
+const COVER_EXT = ['jpg', 'jpeg', 'png', 'webp', 'avif'];
 const IMG_EXT = new Set(['.jpg', '.jpeg', '.png', '.heic', '.webp', '.tiff', '.gif']);
 
 const args = process.argv.slice(2);
 const DRY = args.includes('--dry-run');
 const PUSH = args.includes('--push');
 const STRICT = args.includes('--strict');
+const BACKFILL = args.includes('--backfill');
+const ENRICH = !args.includes('--no-enrich');
 const explicit = args.filter((a) => !a.startsWith('--'));
 
 /* ----------------------------- helpers ----------------------------- */
@@ -55,8 +63,7 @@ function slugify(input) {
     .replace(/^-+|-+$/g, '');
 }
 
-// Fold a name to a comparison key. Strips diacritics AND treats t/ł as the
-// same letter, so the OCR artifact (Michat/Pawet) folds onto Michał/Paweł.
+// Fold a name so the OCR artifact (t vs ł) matches the roster spelling.
 function memberKey(s) {
   return s
     .toLowerCase()
@@ -68,28 +75,21 @@ function memberKey(s) {
 }
 
 function log(...m) { console.log(...m); }
+function hasCover(slug) { return COVER_EXT.some((e) => existsSync(join(COVERS, `${slug}.${e}`))); }
 
 function runOcr(imgPath) {
-  const out = execFileSync('swift', [OCR_SWIFT, imgPath], {
-    encoding: 'utf8',
-    maxBuffer: 16 * 1024 * 1024,
-  });
-  // ocr.swift prints a "=== filename ===" header per image; drop it
-  return out
-    .split('\n')
-    .filter((l) => !/^===\s.*\s===$/.test(l.trim()))
-    .join('\n');
+  const out = execFileSync('swift', [OCR_SWIFT, imgPath], { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 });
+  return out.split('\n').filter((l) => !/^===\s.*\s===$/.test(l.trim())).join('\n');
 }
 
 /* ----------------------------- parsing ----------------------------- */
 
-const SCORE_RE = /^(.+?)\s*[-–—:]\s*(\d{1,2})$/; // "Karol - 8"
-const NOSCORE_RE = /^(.+?)\s*[-–—:]\s*$/; // "Zosia -" (took part, no score)
-const AVG_RE = /^(\d{1,2})(?:[.,]\d+)?$/; // "7,71" or "8"
-const PAGE_RE = /^\d+\s*\/\s*\d+$/; // "6/8" page marker from stitched shots
-const AUTHOR_INITIAL = /(^|\s)[A-ZŻŹĆŁŚĘÓŃ]\.\s*[A-ZŻŹĆŁŚĘÓŃ]?/; // "A. Weir", "C.J. Tudor"
+const SCORE_RE = /^(.+?)\s*[-–—:]\s*(\d{1,2})$/;
+const NOSCORE_RE = /^(.+?)\s*[-–—:]\s*$/;
+const AVG_RE = /^(\d{1,2})(?:[.,]\d+)?$/;
+const PAGE_RE = /^\d+\s*\/\s*\d+$/;
+const AUTHOR_INITIAL = /(^|\s)[A-ZŻŹĆŁŚĘÓŃ]\.\s*[A-ZŻŹĆŁŚĘÓŃ]?/;
 
-// Split OCR text into raw book blocks: header line(s) + score lines + optional average.
 function parseBlocks(text) {
   const lines = text.split('\n').map((l) => l.trim());
   const blocks = [];
@@ -113,15 +113,11 @@ function parseBlocks(text) {
       });
       continue;
     }
-
     if (AVG_RE.test(line) && cur && cur.scores.length) {
       cur.avg = parseFloat(line.replace(',', '.'));
       flush();
       continue;
     }
-
-    // A non-score line: it's a header. If it arrives right after scores
-    // (no blank line between), it starts a new block.
     if (cur && cur.scores.length) flush();
     if (!cur) cur = { header: [], scores: [], avg: null };
     cur.header.push(line);
@@ -133,16 +129,13 @@ function parseBlocks(text) {
 function splitTitleAuthor(header) {
   const text = header.join(' ').replace(/\s+/g, ' ').trim();
   if (!text.includes(',')) return { title: text, author: null, warnings: [] };
-
   const idx = text.lastIndexOf(',');
   const left = text.slice(0, idx).trim();
   const right = text.slice(idx + 1).trim();
   const leftAuthor = AUTHOR_INITIAL.test(left);
   const rightAuthor = AUTHOR_INITIAL.test(right);
-
   if (rightAuthor && !leftAuthor) return { title: left, author: right, warnings: [] };
   if (leftAuthor && !rightAuthor) return { title: right, author: left, warnings: [] };
-  // Cannot tell which side is the author — keep the whole thing as the title.
   return {
     title: text,
     author: null,
@@ -169,14 +162,11 @@ function finalizeBook(block, roster) {
   const nums = Object.values(scores).filter((s) => typeof s === 'number');
   const computed = nums.length ? nums.reduce((a, c) => a + c, 0) / nums.length : null;
   if (block.avg != null && computed != null && Math.abs(computed - block.avg) > 0.06) {
-    notes.push(
-      `Średnia z ekranu (${block.avg}) ≠ policzona (${computed.toFixed(2)}) — możliwe błędne odczytanie ocen`,
-    );
+    notes.push(`Średnia z ekranu (${block.avg}) ≠ policzona (${computed.toFixed(2)}) — możliwe błędne odczytanie ocen`);
   }
   if (block.avg == null) notes.push('Brak średniej na ekranie — nie udało się zweryfikować ocen');
   if (!title) notes.push('Nie rozpoznano tytułu');
 
-  // Blocking issues force human review; advisory ones are added but reported.
   const blocking = notes.filter(
     (n) => n.includes('Średnia z ekranu') || n.includes('Niepewny/nowy członek') || n.includes('Nie rozpoznano tytułu'),
   );
@@ -193,9 +183,7 @@ function finalizeBook(block, roster) {
 
 /* ------------------------------ books ------------------------------ */
 
-function loadBooks() {
-  return JSON.parse(readFileSync(DATA, 'utf8'));
-}
+function loadBooks() { return JSON.parse(readFileSync(DATA, 'utf8')); }
 
 function buildRoster(books) {
   const roster = new Set();
@@ -203,14 +191,20 @@ function buildRoster(books) {
   return roster;
 }
 
-// Serialise in the same compact style as the hand-written books.json
+// Serialise in the same compact style as the hand-written books.json.
 function serializeBooks(books) {
   const items = books.map((b) => {
     const scores = Object.entries(b.scores)
       .map(([k, v]) => `${JSON.stringify(k)}: ${v === null ? 'null' : v}`)
       .join(', ');
-    const author = b.author == null ? 'null' : JSON.stringify(b.author);
-    return `  {\n    "title": ${JSON.stringify(b.title)},\n    "author": ${author},\n    "scores": { ${scores} }\n  }`;
+    const lines = [
+      `    "title": ${JSON.stringify(b.title)}`,
+      `    "author": ${b.author == null ? 'null' : JSON.stringify(b.author)}`,
+      `    "scores": { ${scores} }`,
+    ];
+    if (b.categories && b.categories.length) lines.push(`    "categories": ${JSON.stringify(b.categories)}`);
+    if (b.description) lines.push(`    "description": ${JSON.stringify(b.description)}`);
+    return `  {\n${lines.join(',\n')}\n  }`;
   });
   return `[\n${items.join(',\n')}\n]\n`;
 }
@@ -218,7 +212,7 @@ function serializeBooks(books) {
 /* --------------------------- side effects -------------------------- */
 
 function ensureDirs() {
-  for (const d of [INBOX, PROCESSED, REVIEW]) if (!existsSync(d)) mkdirSync(d, { recursive: true });
+  for (const d of [INBOX, PROCESSED, REVIEW, COVERS]) if (!existsSync(d)) mkdirSync(d, { recursive: true });
 }
 
 function collectImages() {
@@ -232,22 +226,48 @@ function collectImages() {
 function moveTo(dir, imgPath, sidecar) {
   if (DRY) return;
   const dest = join(dir, basename(imgPath));
-  try {
-    renameSync(imgPath, dest);
-  } catch {
-    copyFileSync(imgPath, dest); // cross-device fallback
-  }
+  try { renameSync(imgPath, dest); } catch { copyFileSync(imgPath, dest); }
   if (sidecar) writeFileSync(dest.replace(/\.[^.]+$/, '') + '.review.txt', sidecar);
 }
 
-function gitPush(titles) {
-  const git = (as) => execFileSync('git', as, { cwd: ROOT, encoding: 'utf8' });
+// Fill in description / categories / cover for one entry (mutates it). Best-effort.
+async function enrich(entry, slug) {
+  let meta;
   try {
-    git(['add', 'src/data/books.json']);
-    const status = git(['status', '--porcelain', 'src/data/books.json']).trim();
+    meta = await fetchMetadata(entry.title, entry.author);
+  } catch (e) {
+    log(`      · wzbogacanie nie powiodło się: ${e.message}`);
+    return;
+  }
+  if (!meta) { log('      · brak metadanych (nie znaleziono książki)'); return; }
+
+  if (meta.description && !entry.description) entry.description = meta.description;
+  if (meta.categories?.length && !(entry.categories && entry.categories.length)) entry.categories = meta.categories;
+
+  let coverMsg = 'brak okładki';
+  if (hasCover(slug)) {
+    coverMsg = 'okładka już jest (pomijam)';
+  } else if (meta.coverUrls.length && !DRY) {
+    const dest = await downloadBestCover(meta.coverUrls, join(COVERS, slug));
+    coverMsg = dest ? `okładka -> ${basename(dest)}` : 'nie udało się pobrać okładki';
+  } else if (meta.coverUrls.length && DRY) {
+    coverMsg = `${meta.coverUrls.length} kandydatów na okładkę`;
+  }
+
+  const src = meta.sources.join(' + ') || '—';
+  log(`      + opis: ${entry.description ? 'tak' : 'nie'} · kategorie: ${(entry.categories || []).join(', ') || '—'} · ${coverMsg}  [${src}]`);
+  if (DRY && entry.description) log(`        opis: ${entry.description.slice(0, 160)}${entry.description.length > 160 ? '…' : ''}`);
+}
+
+function gitPush(subject) {
+  const git = (as) => execFileSync('git', as, { cwd: ROOT, encoding: 'utf8' });
+  const paths = ['src/data/books.json', 'src/assets/covers'];
+  try {
+    const status = git(['status', '--porcelain', '--', ...paths]).trim();
     if (status) {
-      git(['commit', '-m', `Dodano: ${titles.join(', ')} (ingest)`]);
-      log(`✓ Zatwierdzono: ${titles.join(', ')}`);
+      git(['add', '--', ...paths]);
+      git(['commit', '-m', subject, '--', ...paths]);
+      log(`✓ ${subject}`);
     }
     git(['push']); // also flushes any commit left unpushed by an earlier failure
     log('↑ Wypchnięto do repo — GitHub Pages przebuduje stronę.');
@@ -259,17 +279,41 @@ function gitPush(titles) {
 
 /* ------------------------------ main ------------------------------- */
 
-function main() {
+async function backfill(books) {
+  let changed = 0;
+  for (const b of books) {
+    const slug = slugify(b.title);
+    const needs = !b.description || !(b.categories && b.categories.length) || !hasCover(slug);
+    if (!needs) continue;
+    log(`▶ ${b.title}`);
+    if (!b.categories) b.categories = [];
+    if (ENRICH) await enrich(b, slug);
+    changed += 1;
+  }
+  if (changed && !DRY) {
+    writeFileSync(DATA, serializeBooks(books));
+    log(`\n✓ Uzupełniono metadane dla ${changed} książki/ek.`);
+    if (PUSH) gitPush(`Uzupełniono metadane (${changed})`);
+    else log('  (uruchom z --push, aby zatwierdzić i wypchnąć)');
+  } else if (!changed) {
+    log('\nWszystkie książki mają już komplet metadanych.');
+  } else {
+    log('\n[dry-run] Nic nie zapisano.');
+  }
+}
+
+async function main() {
   if (!existsSync(OCR_SWIFT)) { console.error(`Brak ${OCR_SWIFT}`); process.exit(1); }
   ensureDirs();
+  const books = loadBooks();
+
+  if (BACKFILL) { await backfill(books); return; }
 
   const images = collectImages();
   if (!images.length) { log('Brak obrazów do przetworzenia (dołóż pliki do inbox/).'); return; }
 
-  const books = loadBooks();
   const roster = buildRoster(books);
   const existingSlugs = new Set(books.map((b) => slugify(b.title)));
-
   const added = [];
 
   for (const img of images) {
@@ -291,14 +335,12 @@ function main() {
     }
 
     const needsReview = parsed.filter((p) => p.blocking.length);
-    const dupes = parsed.filter((p) => existingSlugs.has(p.slug));
     const ready = parsed.filter((p) => !p.blocking.length && !existingSlugs.has(p.slug));
 
     for (const p of parsed) {
       const tag = existingSlugs.has(p.slug) ? 'JUŻ ISTNIEJE' : p.blocking.length ? 'DO PRZEGLĄDU' : 'OK';
       log(`  • [${tag}] „${p.entry.title}" — ${Object.keys(p.entry.scores).length} ocen, śr. ${p.computedAverage?.toFixed(2) ?? '—'}`);
       for (const n of p.notes) log(`      ⚠ ${n}`);
-      if (DRY) log('      ' + JSON.stringify(p.entry));
     }
 
     if (needsReview.length) {
@@ -308,22 +350,22 @@ function main() {
         `\n\n--- surowy OCR ---\n${text}\n`;
       log('  → obraz przeniesiony do review/ (nic nie dodano z tego obrazu)');
       moveTo(REVIEW, img, sidecar);
-      continue; // keep an image's books together; don't half-ingest
+      continue;
     }
 
     for (const p of ready) {
+      if (ENRICH) await enrich(p.entry, p.slug);
       books.push(p.entry);
       existingSlugs.add(p.slug);
       added.push(p.entry.title);
     }
-    if (dupes.length && !ready.length) log('  → same duplikaty; obraz do processed/');
     moveTo(PROCESSED, img);
   }
 
   if (added.length && !DRY) {
     writeFileSync(DATA, serializeBooks(books));
     log(`\n✓ Dodano ${added.length} książkę/i do books.json: ${added.join(', ')}`);
-    if (PUSH) gitPush(added);
+    if (PUSH) gitPush(`Dodano: ${added.join(', ')} (ingest)`);
     else log('  (uruchom z --push, aby zatwierdzić i wypchnąć do repo)');
   } else if (!added.length) {
     log('\nNie dodano nowych książek.');
@@ -332,4 +374,4 @@ function main() {
   }
 }
 
-main();
+await main();

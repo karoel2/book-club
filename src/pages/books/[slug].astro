@@ -33,6 +33,16 @@ if (!book) throw new Error(`Nie znaleziono książki dla slug: ${slug}`);
         <h1 class="book-title">{book.title}</h1>
         <p class="book-author">{book.author ? book.author : 'Autor nieznany'}</p>
 
+        {
+          book.categories.length > 0 && (
+            <ul class="cats" aria-label="Kategorie">
+              {book.categories.map((c) => (
+                <li class="cat">{c}</li>
+              ))}
+            </ul>
+          )
+        }
+
         <div class="avg-block">
           {
             book.average !== null ? (
@@ -51,6 +61,16 @@ if (!book) throw new Error(`Nie znaleziono książki dla slug: ${slug}`);
         </div>
       </div>
     </article>
+
+    {
+      book.description && (
+        <section class="desc" aria-labelledby="desc-heading">
+          <h2 id="desc-heading" class="desc-title">Opis</h2>
+          <p class="desc-text">{book.description}</p>
+          <p class="desc-src">Opis i kategorie: Google Books / Open Library</p>
+        </section>
+      )
+    }
 
     <section class="scores" aria-labelledby="scores-heading">
       <h2 id="scores-heading" class="scores-title">Oceny członków</h2>
@@ -109,6 +129,40 @@ if (!book) throw new Error(`Nie znaleziono książki dla slug: ${slug}`);
     font-size: 1.1rem;
     margin: 0;
   }
+  .cats {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin: 0.85rem 0 0;
+    padding: 0;
+  }
+  .cat {
+    font-size: 0.78rem;
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    padding: 0.22rem 0.6rem;
+  }
+  .desc {
+    margin-top: clamp(2rem, 6vw, 3rem);
+    max-width: 42rem;
+  }
+  .desc-title {
+    font-size: 1.4rem;
+    margin-bottom: 0.6rem;
+  }
+  .desc-text {
+    margin: 0;
+    line-height: 1.7;
+    white-space: pre-line;
+  }
+  .desc-src {
+    margin: 0.9rem 0 0;
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
   .avg-block {
     display: flex;
     align-items: center;
@@ -161,6 +215,9 @@ if (!book) throw new Error(`Nie znaleziono książki dla slug: ${slug}`);
       align-items: center;
     }
     .avg-block {
+      justify-content: center;
+    }
+    .cats {
       justify-content: center;
     }
   }
