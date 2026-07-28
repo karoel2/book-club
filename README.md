@@ -126,6 +126,37 @@ macOS gotchas:
 - If `node`/`swift` aren't found, fix the `PATH` line at the top of the wrapper
   (`which node`, `which swift`).
 
+## Add a book by email (serverless, no computer)
+
+Instead of keeping a Mac running cron, you can **email a screenshot from your phone**
+and have the site update itself. An **Azure Function** plus a **Logic App** watching a
+Gmail inbox do exactly what the CLI does — OCR → parse → enrich → commit to GitHub
+(which triggers the Pages build). The parsing and enrichment are the *same shared code*
+(`scripts/lib/parse.mjs`, `scripts/metadata.mjs`); only the OCR engine differs
+(macOS Vision → **Azure AI Vision**, which reads Polish fine). Cost is ≈ $0 on the free tiers.
+
+**Day-to-day use:** attach the screenshot to an email and send it from your
+allow-listed Gmail address to the watched mailbox. Within a couple of minutes the
+book appears on the site. Same safety net as the CLI — a misread score or an
+unrecognised name comes back as *needs review* and is **not** published; you can
+reply-email the result to yourself for confirmation.
+
+**One-time setup** (~15 min) — full walkthrough with copy-paste commands in
+**[azure/README.md](azure/README.md)**. In short:
+
+1. Create a fine-grained **GitHub token** (Contents: read & write, this repo only).
+2. Provision with the Azure CLI: a resource group, an **Azure AI Vision** resource
+   (free **F0** tier), and a **Function App** (Consumption, Node 20); put the keys
+   in the function's app settings (`VISION_*`, `GITHUB_TOKEN`, `GITHUB_REPO`,
+   `INGEST_SECRET`, `ALLOWED_SENDERS`).
+3. Deploy the function: `cd azure && npm install && npm run sync && func azure functionapp publish <app>`.
+4. Create a **Logic App (Consumption)**, add the **Gmail → "When a new email
+   arrives"** trigger (authorise Google), filter to your sender, and POST each
+   attachment to the function URL. `azure/logicapp.workflow.json` mirrors these steps.
+
+The endpoint is protected three ways (function key, a shared-secret header, and the
+sender allow-list). The local cron/CLI route above still works as an offline fallback.
+
 ## Hosting on GitHub Pages (free)
 
 Deployment is already wired up in `.github/workflows/deploy.yml`: every push to
