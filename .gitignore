@@ -11,6 +11,11 @@ inbox/
 # local tooling
 .claude/
 
+# azure function (generated / secrets / deps)
+azure/src/shared/
+azure/local.settings.json
+azure/.python_packages/
+
 # misc
 .DS_Store
 *.log

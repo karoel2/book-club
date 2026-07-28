@@ -1,0 +1,17 @@
+{
+  "name": "book-club-ingest-fn",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Serverless email → OCR → GitHub commit ingest for the book-club site",
+  "main": "src/functions/*.mjs",
+  "scripts": {
+    "sync": "node scripts/sync-shared.mjs",
+    "prestart": "node scripts/sync-shared.mjs",
+    "start": "func start",
+    "predeploy": "node scripts/sync-shared.mjs"
+  },
+  "dependencies": {
+    "@azure/functions": "^4.5.0",
+    "@octokit/rest": "^21.0.0"
+  }
+}

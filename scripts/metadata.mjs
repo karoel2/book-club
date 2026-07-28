@@ -203,11 +203,11 @@ export async function fetchMetadata(title, author) {
 }
 
 /**
- * Try each cover URL, keep the largest valid image (a proxy for resolution),
- * and write it to `${destNoExt}.<ext>`. Skips tiny blank placeholders.
- * Returns the written path, or null if none worked.
+ * Try each cover URL and return the largest valid image (a proxy for
+ * resolution) as `{ buf, ext }`, or null. Portable (no filesystem) — used by
+ * both the CLI and the serverless function.
  */
-export async function downloadBestCover(coverUrls, destNoExt) {
+export async function pickBestCover(coverUrls) {
   let best = null;
   for (const url of coverUrls) {
     try {
@@ -222,6 +222,15 @@ export async function downloadBestCover(coverUrls, destNoExt) {
       /* try the next candidate */
     }
   }
+  return best;
+}
+
+/**
+ * CLI wrapper: pick the best cover and write it to `${destNoExt}.<ext>`.
+ * Returns the written path, or null if none worked.
+ */
+export async function downloadBestCover(coverUrls, destNoExt) {
+  const best = await pickBestCover(coverUrls);
   if (!best) return null;
   const dest = `${destNoExt}.${best.ext}`;
   writeFileSync(dest, best.buf);

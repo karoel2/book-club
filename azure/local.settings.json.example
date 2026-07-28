@@ -1,0 +1,20 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+
+    "VISION_ENDPOINT": "https://<your-vision-resource>.cognitiveservices.azure.com/",
+    "VISION_KEY": "<azure-ai-vision-key>",
+
+    "GITHUB_TOKEN": "github_pat_<fine-grained, contents:read-write on this repo only>",
+    "GITHUB_REPO": "<owner>/<repo>",
+    "GITHUB_BRANCH": "main",
+
+    "GOOGLE_BOOKS_COUNTRY": "PL",
+    "GOOGLE_BOOKS_API_KEY": "",
+
+    "INGEST_SECRET": "<long-random-string, must match the Logic App header>",
+    "ALLOWED_SENDERS": "you@gmail.com"
+  }
+}

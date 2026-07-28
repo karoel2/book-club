@@ -1,0 +1,64 @@
+{
+  "//": "Consumption Logic App workflow: Gmail 'new email with attachment' -> POST each attachment to the ingest function. Paste into the Logic App 'Code view', or build the same steps in the Designer. Replace <FUNCTION_URL_WITH_CODE>, <INGEST_SECRET>, and the allowed sender. The Gmail API connection must be created + authorised in the Designer (OAuth); its reference is filled into $connections.",
+  "definition": {
+    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "$connections": { "type": "Object", "defaultValue": {} }
+    },
+    "triggers": {
+      "When_a_new_email_arrives": {
+        "type": "ApiConnection",
+        "recurrence": { "frequency": "Minute", "interval": 3 },
+        "inputs": {
+          "host": { "connection": { "name": "@parameters('$connections')['gmail']['connectionId']" } },
+          "method": "get",
+          "path": "/Mail/OnNewEmail",
+          "queries": {
+            "label": "INBOX",
+            "includeAttachments": true,
+            "importance": "All",
+            "starred": "All"
+          }
+        }
+      }
+    },
+    "actions": {
+      "Only_from_allowed_sender": {
+        "type": "If",
+        "expression": {
+          "and": [
+            { "contains": ["@toLower(triggerBody()?['From'])", "you@gmail.com"] },
+            { "greater": ["@length(coalesce(triggerBody()?['Attachments'], createArray()))", 0] }
+          ]
+        },
+        "actions": {
+          "For_each_attachment": {
+            "type": "Foreach",
+            "foreach": "@triggerBody()?['Attachments']",
+            "actions": {
+              "Call_ingest_function": {
+                "type": "Http",
+                "inputs": {
+                  "method": "POST",
+                  "uri": "<FUNCTION_URL_WITH_CODE>",
+                  "headers": {
+                    "Content-Type": "application/json",
+                    "x-ingest-secret": "<INGEST_SECRET>"
+                  },
+                  "body": {
+                    "contentBase64": "@items('For_each_attachment')?['ContentBytes']",
+                    "filename": "@items('For_each_attachment')?['Name']",
+                    "from": "@triggerBody()?['From']"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "else": { "actions": {} }
+      }
+    },
+    "outputs": {}
+  }
+}
