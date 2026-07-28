@@ -6,7 +6,7 @@
   },
   {
     "title": "Kwiaty dla Algernona",
-    "author": null,
+    "author": "Daniel Keyes",
     "scores": { "Asia": 7, "Michał": 6, "Zosia": 8, "Karol": 7, "Sara": 7, "Jaśmin": 8 }
   },
   {
@@ -26,12 +26,13 @@
   },
   {
     "title": "Droga do szczęścia",
-    "author": null,
-    "scores": { "Karolina": 6, "Paulina": 5, "Asia": 7, "Nicole": 4, "Zosia": null, "Jaśmin": 6, "Sara": 5 }
+    "author": "Richard Yates",
+    "scores": { "Karolina": 6, "Paulina": 5, "Asia": 7, "Nicole": 4, "Zosia": null, "Jaśmin": 6, "Sara": 5 },
+    "categories": ["Married people","Fiction","Suburban life"]
   },
   {
     "title": "Śnieg przykryje",
-    "author": null,
+    "author": "Michał Śmielak",
     "scores": { "Nicole": 7, "Karolina": 7, "Asia": 6, "Karol": 6, "Bartek": 7, "Jaśmin": 7, "Zosia": 8, "Paweł": 10, "Paulina": 8, "Sara": 7 }
   },
   {
