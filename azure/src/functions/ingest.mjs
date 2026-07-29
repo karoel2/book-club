@@ -1,14 +1,24 @@
-// HTTP-triggered serverless ingest. A Logic App (Gmail trigger) POSTs an email
+// HTTP-triggered serverless ingest. A Logic App (email trigger) POSTs an email
 // attachment here; we OCR it, parse scores, enrich metadata, and commit the
 // result to GitHub — which fires the existing Pages build.
 //
-// Body: { contentBase64: string, filename?: string, from?: string }
+// Body: { contentBase64: string, filename?: string, from?: string|object,
+//         dryRun?: boolean, text?: string }
+//   - dryRun (or ?dry=1): OCR + parse only, return the result, commit nothing.
+//   - text: skip OCR and parse this text directly (test parsing without Vision).
 // Auth: function key (?code=) + a shared secret header + optional sender allowlist.
 import { app } from '@azure/functions';
 import { parseBlocks, finalizeBook, buildRoster, slugify, serializeBooks } from '../shared/parse.mjs';
 import { fetchMetadata, pickBestCover } from '../shared/metadata.mjs';
 import { ocrImage } from '../ocr.mjs';
 import { loadBooksJson, commitChanges } from '../github.mjs';
+
+// Outlook/Gmail send "from" as a plain address or an object — normalise it.
+function extractFrom(from) {
+  if (!from) return '';
+  if (typeof from === 'string') return from;
+  return from.emailAddress?.address || from.address || from.email || JSON.stringify(from);
+}
 
 function allowedSender(from) {
   const allow = (process.env.ALLOWED_SENDERS || '')
@@ -31,18 +41,24 @@ app.http('ingest', {
     }
 
     const body = await request.json().catch(() => ({}));
-    const { contentBase64, filename = 'screenshot.jpg', from = '' } = body;
+    const dryRun = body.dryRun === true || request.query.get('dry') === '1';
+    const from = extractFrom(body.from);
+    const filename = body.filename || 'screenshot.jpg';
+
     if (!allowedSender(from)) return { status: 403, jsonBody: { error: 'sender not allowed', from } };
-    if (!contentBase64) return { status: 400, jsonBody: { error: 'missing contentBase64' } };
 
-    const imageBytes = Buffer.from(contentBase64, 'base64');
-
+    // OCR the image, or use provided text to test parsing without a Vision key.
     let text;
-    try {
-      text = await ocrImage(imageBytes);
-    } catch (e) {
-      context.error(`OCR failed: ${e.message}`);
-      return { status: 502, jsonBody: { error: 'ocr_failed', detail: e.message } };
+    if (typeof body.text === 'string' && body.text.trim()) {
+      text = body.text;
+    } else {
+      if (!body.contentBase64) return { status: 400, jsonBody: { error: 'missing contentBase64' } };
+      try {
+        text = await ocrImage(Buffer.from(body.contentBase64, 'base64'));
+      } catch (e) {
+        context.error(`OCR failed: ${e.message}`);
+        return { status: 502, jsonBody: { error: 'ocr_failed', detail: e.message } };
+      }
     }
 
     let books;
@@ -55,8 +71,32 @@ app.http('ingest', {
 
     const roster = buildRoster(books);
     const existing = new Set(books.map((b) => slugify(b.title)));
-
     const parsed = parseBlocks(text).map((b) => finalizeBook(b, roster, false));
+    context.log(`ingest ${filename} from "${from}": ocrChars=${text.length} blocks=${parsed.length} dryRun=${dryRun}`);
+
+    if (dryRun) {
+      return {
+        status: 200,
+        jsonBody: {
+          dryRun: true,
+          from,
+          ocrText: text,
+          blockCount: parsed.length,
+          parsed: parsed.map((p) => ({
+            title: p.entry.title,
+            author: p.entry.author,
+            scores: p.entry.scores,
+            slug: p.slug,
+            exists: existing.has(p.slug),
+            ocrAverage: p.ocrAverage,
+            computedAverage: p.computedAverage,
+            blocking: p.blocking,
+            notes: p.notes,
+          })),
+        },
+      };
+    }
+
     const added = [];
     const review = [];
     const skipped = [];
@@ -99,7 +139,7 @@ app.http('ingest', {
       }
     }
 
-    context.log(`ingest ${filename} from ${from}: added=${added.length} review=${review.length} skipped=${skipped.length}`);
+    context.log(`ingest result: added=${added.length} review=${review.length} skipped=${skipped.length}`);
     return { status: 200, jsonBody: { added, review, skipped, commit } };
   },
 });
