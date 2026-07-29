@@ -71,5 +71,20 @@
     "title": "Nie ma tego złego",
     "author": "M. Mortka",
     "scores": { "Michał": 6, "Nicole": 7, "Asia": 7, "Karol": 5, "Sara": 7 }
+  },
+  {
+    "title": "V ... 1 nasla - o",
+    "author": null,
+    "scores": { "Sara": 8 }
+  },
+  {
+    "title": "Poławiacze Sunu",
+    "author": "M. Organiściak",
+    "scores": { "Paweł": 7, "Karol": 6, "Agata": 5, "Zosia": 7, "Kasia": 6, "Sara": 7 }
+  },
+  {
+    "title": "Król Szczurów",
+    "author": "J. Clavell",
+    "scores": { "Asia": 5, "Paweł": 7, "Agata": 6, "Kasia": 6, "Karol": 6, "Sara": 5 }
   }
 ]
