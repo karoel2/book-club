@@ -1,0 +1,52 @@
+{
+  "//": "Office 365 Outlook variant. Paste into the Logic App 'Code view' (or build the same in the Designer). Replace <FUNCTION_URL_WITH_CODE> and <INGEST_SECRET>. The Office 365 Outlook connection must be created + authorised in the Designer; its reference fills $connections['office365']. Sender allow-listing is enforced by the function (ALLOWED_SENDERS), so there's no condition here. fetchOnlyWithAttachment=false so inline-image mails still trigger (the foreach is simply empty when there are no real attachments). Outlook attachment fields are camelCase: contentBytes / name.",
+  "definition": {
+    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "$connections": { "type": "Object", "defaultValue": {} }
+    },
+    "triggers": {
+      "When_a_new_email_arrives_V3": {
+        "type": "ApiConnection",
+        "recurrence": { "frequency": "Minute", "interval": 3 },
+        "inputs": {
+          "host": { "connection": { "name": "@parameters('$connections')['office365']['connectionId']" } },
+          "method": "get",
+          "path": "/v3/Mail/OnNewEmail",
+          "queries": {
+            "folderPath": "Inbox",
+            "importance": "Any",
+            "fetchOnlyWithAttachment": false,
+            "includeAttachments": true
+          }
+        }
+      }
+    },
+    "actions": {
+      "For_each_attachment": {
+        "type": "Foreach",
+        "foreach": "@coalesce(triggerBody()?['attachments'], createArray())",
+        "actions": {
+          "Call_ingest_function": {
+            "type": "Http",
+            "inputs": {
+              "method": "POST",
+              "uri": "<FUNCTION_URL_WITH_CODE>",
+              "headers": {
+                "Content-Type": "application/json",
+                "x-ingest-secret": "<INGEST_SECRET>"
+              },
+              "body": {
+                "contentBase64": "@items('For_each_attachment')?['contentBytes']",
+                "filename": "@items('For_each_attachment')?['name']",
+                "from": "@triggerBody()?['from']"
+              }
+            }
+          }
+        }
+      }
+    },
+    "outputs": {}
+  }
+}
