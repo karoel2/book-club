@@ -81,5 +81,15 @@
     "title": "Król Szczurów",
     "author": "J. Clavell",
     "scores": { "Asia": 5, "Paweł": 7, "Agata": 6, "Kasia": 6, "Karol": 6, "Sara": 5 }
+  },
+  {
+    "title": "Mimika",
+    "author": "S. Fitzek",
+    "scores": { "Karol": 6, "Jaśmin": 9, "Zosia": 5, "Nicole": 7, "Kasia": 7, "Asia": 6, "Sara": 8, "Paulina": 5 }
+  },
+  {
+    "title": "Stowarzyszenie Umarłych Poetów",
+    "author": null,
+    "scores": { "Paulina": 5, "Zosia": 8, "Paweł": 6, "Nicole": 8, "Asia": 5, "Bartek": 7, "Karolina": 5, "Karol": 6, "Jaśmin": 8, "Kasia": 4, "Sara": 6 }
   }
 ]
