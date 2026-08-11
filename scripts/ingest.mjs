@@ -34,7 +34,7 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve, basename, extname } from 'node:path';
 import { fetchMetadata, downloadBestCover } from './metadata.mjs';
-import { slugify, parseBlocks, finalizeBook, buildRoster, serializeBooks } from './lib/parse.mjs';
+import { slugify, parseBlocks, finalizeBooks, buildRoster, serializeBooks } from './lib/parse.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
@@ -203,21 +203,28 @@ async function main() {
       continue;
     }
 
-    const parsed = parseBlocks(text).map((blk) => finalizeBook(blk, roster, STRICT));
+    const all = finalizeBooks(parseBlocks(text, roster), roster, STRICT);
+    // Edge-cut fragments are noise, not candidates: they neither publish nor
+    // send the image to review.
+    const parsed = all.filter((p) => !p.fragment);
+
+    for (const p of all) {
+      const tag = p.fragment ? 'FRAGMENT' : existingSlugs.has(p.slug) ? 'JUŻ ISTNIEJE' : p.blocking.length ? 'DO PRZEGLĄDU' : 'OK';
+      log(`  • [${tag}] „${p.entry.title}" — ${Object.keys(p.entry.scores).length} ocen, śr. ${p.computedAverage?.toFixed(2) ?? '—'}`);
+      for (const n of p.notes) log(`      ⚠ ${n}`);
+    }
+
     if (!parsed.length) {
       log('  ✗ Nie znaleziono żadnych ocen. -> review/');
       moveTo(REVIEW, img, `Nie udało się sparsować.\n\n--- surowy OCR ---\n${text}\n`);
       continue;
     }
 
-    const needsReview = parsed.filter((p) => p.blocking.length);
-    const ready = parsed.filter((p) => !p.blocking.length && !existingSlugs.has(p.slug));
-
-    for (const p of parsed) {
-      const tag = existingSlugs.has(p.slug) ? 'JUŻ ISTNIEJE' : p.blocking.length ? 'DO PRZEGLĄDU' : 'OK';
-      log(`  • [${tag}] „${p.entry.title}" — ${Object.keys(p.entry.scores).length} ocen, śr. ${p.computedAverage?.toFixed(2) ?? '—'}`);
-      for (const n of p.notes) log(`      ⚠ ${n}`);
-    }
+    // Books already on the site are skipped either way, so their warnings must
+    // not drag the image to review.
+    const candidates = parsed.filter((p) => !existingSlugs.has(p.slug));
+    const needsReview = candidates.filter((p) => p.blocking.length);
+    const ready = candidates.filter((p) => !p.blocking.length);
 
     if (needsReview.length) {
       const sidecar =

@@ -18,7 +18,11 @@ const UA = 'book-club-ingest/1.0 (personal book-club site)';
 
 async function getJson(url) {
   const r = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json' } });
-  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  if (!r.ok) {
+    const err = new Error(`HTTP ${r.status}`);
+    err.status = r.status;
+    throw err;
+  }
   return r.json();
 }
 
@@ -106,6 +110,10 @@ async function fromGoogle(title, author) {
   queries.push(`intitle:"${T}"`);
   queries.push([title, surname].filter(Boolean).join(' '));
 
+  // The anonymous daily quota is easy to hit and answers 429 to *every* query —
+  // remember it so "no metadata" isn't reported as "wrong title/author".
+  let quotaHit = false;
+
   for (const q of queries) {
     for (const lang of ['&langRestrict=pl', '']) {
       const url =
@@ -114,7 +122,8 @@ async function fromGoogle(title, author) {
       let data;
       try {
         data = await getJson(url);
-      } catch {
+      } catch (e) {
+        if (e.status === 429 || e.status === 403) quotaHit = true;
         continue;
       }
       const items = data.items || [];
@@ -136,6 +145,13 @@ async function fromGoogle(title, author) {
         source: 'Google Books',
       };
     }
+  }
+  if (quotaHit) {
+    const err = new Error(
+      'Google Books: wyczerpany dzienny limit zapytań (HTTP 429) — ustaw GOOGLE_BOOKS_API_KEY albo spróbuj jutro',
+    );
+    err.quota = true;
+    throw err;
   }
   return null;
 }
@@ -175,16 +191,19 @@ async function fromOpenLibrary(title, author) {
 export async function fetchMetadata(title, author) {
   let g = null;
   let o = null;
+  let googleErr = null;
   try {
     g = await fromGoogle(title, author);
-  } catch {
-    /* ignore */
+  } catch (e) {
+    googleErr = e;
   }
   try {
     o = await fromOpenLibrary(title, author);
   } catch {
     /* ignore */
   }
+  // Only surface the quota problem when Open Library couldn't cover for it.
+  if (!g && !o && googleErr?.quota) throw googleErr;
   if (!g && !o) return null;
 
   const description = g?.description || o?.description || null;
