@@ -118,15 +118,59 @@ export function parseBlocks(text, roster = null) {
 }
 
 /**
+ * Every plausible reading of a header, best guess first. Only consulted when the
+ * comma split is a coin toss: the caller confirms one against a book database
+ * rather than the parser guessing (see resolveHeader in ../metadata.mjs).
+ *
+ * Splits on *every* comma, not just the last, so an author survives a title that
+ * contains one ("Dziki, mroczny brzeg, C. McConaghy"). The final candidate is
+ * always the whole header as a title with no author, which is what rescues a
+ * comma'd title that has no author on the line at all.
+ */
+function headerCandidates(text, header) {
+  const out = [];
+  const push = (title, author) => {
+    const t = (title || '').trim();
+    const a = (author || '').trim() || null;
+    if (!t || !WORD_RE.test(t)) return;
+    if (out.some((c) => c.title === t && c.author === a)) return;
+    out.push({ title: t, author: a });
+  };
+
+  // Last comma first: "Title, Author" is the common form, and an earlier comma
+  // is far more likely to belong inside the title than to separate the author.
+  const commas = [];
+  for (let i = 0; i < text.length; i++) if (text[i] === ',') commas.push(i);
+  for (const i of commas.reverse()) {
+    const left = text.slice(0, i).trim();
+    const right = text.slice(i + 1).trim();
+    if (!left || !right) continue;
+    push(left, right);
+    push(right, left);
+  }
+
+  // Notes format: two lines, either way round.
+  if (header.length === 2 && header.every((l) => l.trim())) {
+    push(header[0], header[1]);
+    push(header[1], header[0]);
+  }
+
+  push(text, null); // the comma was part of the title
+  return out;
+}
+
+/**
  * The club writes a header either way round ("Wiedźmin, A. Sapkowski" but also
  * "S. King, Worek Kości"), so the side carrying an initial is the author. When
  * neither side has one ("Wyznania, Kanae Minato") the split is a coin toss —
- * say so rather than guess, because a wrong guess publishes a wrong title.
+ * don't guess, hand back ranked `candidates` for the caller to verify against a
+ * book database, and only block if none of them can be confirmed.
  */
 export function splitTitleAuthor(header) {
   const text = header.join(' ').replace(/\s+/g, ' ').trim();
   const idx = text.lastIndexOf(',');
-  const plain = { title: text, author: null, warnings: [], ambiguous: false };
+  const candidates = headerCandidates(text, header);
+  const plain = { title: text, author: null, warnings: [], ambiguous: false, candidates };
 
   // The notes-app format puts the title and the author on their own lines with
   // no comma anywhere ("Dungeon Crawler Carl" / "Matt Dinniman"). Both look
@@ -137,6 +181,7 @@ export function splitTitleAuthor(header) {
       title: header[0].trim(),
       author: header[1].trim(),
       ambiguous: false,
+      candidates,
       warnings: [`Tytuł i autor wzięte z dwóch linii: „${header[0].trim()}" / „${header[1].trim()}" — sprawdź podział`],
     };
   }
@@ -148,14 +193,31 @@ export function splitTitleAuthor(header) {
 
   const leftAuthor = AUTHOR_INITIAL.test(left);
   const rightAuthor = AUTHOR_INITIAL.test(right);
-  if (rightAuthor && !leftAuthor) return { title: left, author: right, warnings: [], ambiguous: false };
-  if (leftAuthor && !rightAuthor) return { title: right, author: left, warnings: [], ambiguous: false };
+  if (rightAuthor && !leftAuthor) return { title: left, author: right, warnings: [], ambiguous: false, candidates };
+  if (leftAuthor && !rightAuthor) return { title: right, author: left, warnings: [], ambiguous: false, candidates };
   return {
     title: text,
     author: null,
     ambiguous: true,
-    warnings: [`Nie wiadomo, co jest tytułem, a co autorem: „${left}" / „${right}" — dodaj tę książkę ręcznie do books.json`],
+    candidates,
+    warnings: [`Nie wiadomo, co jest tytułem, a co autorem: „${left}" / „${right}" — sprawdzam w bazie książek`],
   };
+}
+
+/**
+ * Rewrite a finalized book once a candidate has been confirmed against a book
+ * database. Clears the ambiguity blocker (leaving any unrelated ones) and — the
+ * easy thing to forget — re-slugs, since the slug drives the duplicate check.
+ */
+export function applyHeaderResolution(p, { title, author }) {
+  p.entry.title = title;
+  p.entry.author = author || null;
+  p.slug = slugify(title || '');
+  const drop = new Set(p.headerNotes || []);
+  p.notes = p.notes.filter((n) => !drop.has(n));
+  p.blocking = p.blocking.filter((n) => !drop.has(n));
+  p.ambiguous = false;
+  return p;
 }
 
 // Fewer votes than this and the block is almost certainly a book sliced by the
@@ -175,7 +237,7 @@ export function finalizeBooks(blocks, roster, strict = false) {
 }
 
 export function finalizeBook(block, roster, strict = false, { sheetHasAverages = true } = {}) {
-  const { title, author, warnings, ambiguous } = splitTitleAuthor(block.header);
+  const { title, author, warnings, ambiguous, candidates } = splitTitleAuthor(block.header);
   const notes = [];
   const blockers = [];
   const warn = (t) => notes.push(t);
@@ -233,6 +295,11 @@ export function finalizeBook(block, roster, strict = false, { sheetHasAverages =
     fragment,
     notes,
     blocking: fragment ? [] : strict ? notes : blockers,
+    // For the caller's database lookup: which readings to try, and which notes
+    // to retract if one of them is confirmed.
+    ambiguous,
+    candidates: candidates || [],
+    headerNotes: ambiguous ? warnings : [],
   };
 }
 

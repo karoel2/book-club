@@ -1,0 +1,92 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "comment": "Consumption Logic App: poll an Outlook.com inbox, POST each attachment to the ingest function. Deliberately a POLLING ApiConnection trigger, not ApiConnectionNotification — the push/webhook variant depends on Outlook.com delivering a MailSubscriptionPoke to a callback URL, which silently never arrived. No subjectFilter and fetchOnlyWithAttachment=false, because a subject filter skips every other mail and phones often inline the screenshot. Attachment fields are PascalCase (ContentBytes/Name) on the Outlook.com connector; Office 365 would be camelCase."
+  },
+  "parameters": {
+    "logicAppName": { "type": "string" },
+    "connectionName": { "type": "string" },
+    "functionId": { "type": "string", "metadata": { "description": "Resource id of the ingest function" } },
+    "ingestSecret": { "type": "securestring" },
+    "pollMinutes": { "type": "int", "defaultValue": 3 }
+  },
+  "variables": {
+    "outlookApiId": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/outlook')]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Logic/workflows",
+      "apiVersion": "2019-05-01",
+      "name": "[parameters('logicAppName')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "state": "Enabled",
+        "parameters": {
+          "$connections": {
+            "value": {
+              "outlook": {
+                "connectionId": "[resourceId('Microsoft.Web/connections', parameters('connectionName'))]",
+                "connectionName": "[parameters('connectionName')]",
+                "id": "[variables('outlookApiId')]"
+              }
+            }
+          }
+        },
+        "definition": {
+          "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {
+            "$connections": { "type": "Object", "defaultValue": {} }
+          },
+          "triggers": {
+            "When_a_new_email_arrives": {
+              "type": "ApiConnection",
+              "recurrence": {
+                "frequency": "Minute",
+                "interval": "[parameters('pollMinutes')]"
+              },
+              "inputs": {
+                "host": { "connection": { "name": "@parameters('$connections')['outlook']['connectionId']" } },
+                "method": "get",
+                "path": "/v2/Mail/OnNewEmail",
+                "queries": {
+                  "folderPath": "Inbox",
+                  "importance": "Any",
+                  "fetchOnlyWithAttachment": false,
+                  "includeAttachments": true
+                }
+              }
+            }
+          },
+          "actions": {
+            "For_each_attachment": {
+              "type": "Foreach",
+              "runAfter": {},
+              "foreach": "@coalesce(triggerBody()?['Attachments'], createArray())",
+              "actions": {
+                "Call_ingest": {
+                  "type": "Function",
+                  "inputs": {
+                    "function": { "id": "[parameters('functionId')]" },
+                    "method": "POST",
+                    "headers": { "x-ingest-secret": "[parameters('ingestSecret')]" },
+                    "body": {
+                      "contentBase64": "@items('For_each_attachment')?['ContentBytes']",
+                      "filename": "@items('For_each_attachment')?['Name']",
+                      "from": "@triggerBody()?['From']"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "outputs": {}
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "logicAppName": { "type": "string", "value": "[parameters('logicAppName')]" }
+  }
+}

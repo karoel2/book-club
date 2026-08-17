@@ -222,6 +222,34 @@ export async function fetchMetadata(title, author) {
 }
 
 /**
+ * Decide an ambiguous "A, B" header by asking the book databases which reading
+ * actually exists. Candidates come from parse.mjs ranked best-first; the first
+ * one that returns metadata wins, because fetchMetadata only answers when the
+ * author (or, author-less, a strong title match) genuinely matches.
+ *
+ * Returns `{ title, author, meta }` or null. The metadata is handed back so the
+ * caller can enrich from it instead of fetching the same book twice.
+ *
+ * `limit` caps the lookups: each candidate costs up to two API calls, and Google
+ * Books is rate-limited without a key.
+ */
+export async function resolveHeader(candidates, { limit = 5 } = {}) {
+  for (const c of (candidates || []).slice(0, limit)) {
+    let meta = null;
+    try {
+      meta = await fetchMetadata(c.title, c.author);
+    } catch {
+      // fetchMetadata only throws when Google hit its quota *and* Open Library
+      // had nothing. That says this reading is unknown, not that the next one
+      // is — keep going, or a quota day would block every ambiguous header.
+      continue;
+    }
+    if (meta) return { title: c.title, author: c.author, meta };
+  }
+  return null;
+}
+
+/**
  * Try each cover URL and return the largest valid image (a proxy for
  * resolution) as `{ buf, ext }`, or null. Portable (no filesystem) — used by
  * both the CLI and the serverless function.

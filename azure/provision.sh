@@ -24,6 +24,9 @@ if [ -f deployment.local.sh ]; then . ./deployment.local.sh; fi
 #   az policy assignment list --query "[].parameters.listOfAllowedLocations.value"
 : "${LOC:?set LOC}"
 : "${VISION:?set VISION}"
+# Azure allows ONE free F0 Computer Vision per subscription, so an existing one
+# often lives in a different resource group than the rest of the stack.
+VISION_RG="${VISION_RG:-$RG}"
 : "${STORAGE:?set STORAGE}"
 : "${FN:?set FN}"
 LA="${LA:-}"
@@ -45,17 +48,17 @@ say "Resource group"
 az group show -n "$RG" -o none 2>/dev/null || az group create -n "$RG" -l "$LOC" -o none
 
 say "Azure AI Vision (F0)"
-if az cognitiveservices account show -n "$VISION" -g "$RG" -o none 2>/dev/null; then
-  echo "  adopting existing $VISION"
+if az cognitiveservices account show -n "$VISION" -g "$VISION_RG" -o none 2>/dev/null; then
+  echo "  adopting existing $VISION (rg=$VISION_RG)"
 else
-  az cognitiveservices account create -n "$VISION" -g "$RG" -l "$LOC" \
+  az cognitiveservices account create -n "$VISION" -g "$VISION_RG" -l "$LOC" \
     --kind ComputerVision --sku F0 --custom-domain "$VISION" --yes -o none || {
       echo "F0 refused. Only one free Computer Vision per subscription — find it with:" >&2
       echo "  az cognitiveservices account list --query \"[?kind=='ComputerVision']\" -o table" >&2
       exit 1; }
 fi
-VISION_ENDPOINT=$(az cognitiveservices account show -n "$VISION" -g "$RG" --query properties.endpoint -o tsv)
-VISION_KEY=$(az cognitiveservices account keys list -n "$VISION" -g "$RG" --query key1 -o tsv)
+VISION_ENDPOINT=$(az cognitiveservices account show -n "$VISION" -g "$VISION_RG" --query properties.endpoint -o tsv)
+VISION_KEY=$(az cognitiveservices account keys list -n "$VISION" -g "$VISION_RG" --query key1 -o tsv)
 
 say "Storage account"
 az storage account show -n "$STORAGE" -g "$RG" -o none 2>/dev/null || \
@@ -67,7 +70,7 @@ say "Function App"
 az functionapp show -n "$FN" -g "$RG" -o none 2>/dev/null || \
   az functionapp create -n "$FN" -g "$RG" \
     --storage-account "$STORAGE" --consumption-plan-location "$LOC" \
-    --runtime node --runtime-version 20 --functions-version 4 --os-type Linux -o none
+    --runtime node --runtime-version 22 --functions-version 4 --os-type Linux -o none
 az functionapp update -n "$FN" -g "$RG" --set httpsOnly=true -o none
 
 say "App settings"
@@ -89,7 +92,8 @@ az functionapp config appsettings set -n "$FN" -g "$RG" --settings \
 say "Deploying the function code"
 npm install --silent
 npm run sync
-func azure functionapp publish "$FN" --build remote
+# --javascript: local.settings.json is git-ignored, so func can't infer the runtime
+func azure functionapp publish "$FN" --build remote --javascript
 
 say "Relaxing the mail trigger (drops subjectFilter, allows inline images)"
 LA_API="https://management.azure.com/subscriptions/$SUB/resourceGroups/$RG/providers/Microsoft.Logic/workflows/$LA"
