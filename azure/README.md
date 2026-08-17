@@ -99,6 +99,33 @@ both matter more than they look:
 If the OAuth consent ever expires, `./authorize-outlook.sh` walks the connection
 through re-consent (that sign-in is the one step that genuinely cannot be scripted).
 
+### Confirmation email
+
+After the attachments are processed the workflow mails a summary back to the
+sender, so a `review` book announces itself instead of vanishing:
+
+```
+✅ Dodano: Achaja
+⚠️ Do przeglądu: „Kiedy żurawie…, Lisa Ridzen" — Nie wiadomo, co jest tytułem…
+↩️ Już na stronie: Wiedźmin
+
+Commit: b966510
+(screenshot.jpg)
+```
+
+The text is built by the function (`buildSummary` in `src/functions/ingest.mjs`)
+and returned as `summary` / `summaryHtml`, because Logic App expressions have no
+sane way to format a list of notes. Three things about the workflow side:
+
+- It **sends** (`POST /v2/Mail`) rather than replying. Every reply path —
+  `/Mail/{id}/Reply`, `/v2/…`, `/v3/…` — returns `NotFound` on the Outlook.com
+  connector; only send exists. So the confirmation is a new mail, subject
+  `Re: <original>`.
+- `Send_summary` runs after `Failed` as well as `Succeeded` — a failed ingest is
+  exactly when you want to be told.
+- `For_each_attachment` is **sequential** (`concurrency.repetitions: 1`), because
+  parallel branches appending to one variable would race and lose lines.
+
 Three reference definitions live here. Only the first reflects what is deployed:
 
 | File | What it is |
@@ -152,8 +179,10 @@ FUNC_URL=http://localhost:7071/api/ingest SECRET=<INGEST_SECRET> FROM=you@exampl
 
 Each book comes back as `added` (committed), `skipped` (already in `books.json`)
 or `review` (parsed, but something looked wrong — deliberately not committed).
-`review` is only a field in the response, not a queue: read it in the Logic App
-run history, under the ingest action's outputs.
+You don't have to go looking for `review` any more — the workflow emails the
+outcome back to whoever sent the screenshot (see *Confirmation email* below).
+It is still only a field in the response, so the run history remains the
+fallback if the mail itself fails.
 
 A header like `Kiedy żurawie odlatują na południe, Lisa Ridzen` used to go
 straight to `review`, because nothing marks which side is the author. Now

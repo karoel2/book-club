@@ -20,6 +20,19 @@ function extractFrom(from) {
   return from.emailAddress?.address || from.address || from.email || JSON.stringify(from);
 }
 
+// A human-readable outcome for the confirmation email. Built here rather than in
+// Logic App expressions, which have no good way to format a list of notes.
+function buildSummary({ added, review, skipped, commit, filename }) {
+  const lines = [];
+  if (added.length) lines.push(`✅ Dodano: ${added.join(', ')}`);
+  for (const r of review) lines.push(`⚠️ Do przeglądu: „${r.title}" — ${r.notes.join('; ')}`);
+  if (skipped.length) lines.push(`↩️ Już na stronie: ${skipped.join(', ')}`);
+  if (!lines.length) lines.push('Nie rozpoznano żadnych ocen na tym zrzucie.');
+  if (commit) lines.push('', `Commit: ${String(commit).slice(0, 7)}`);
+  lines.push('', `(${filename})`);
+  return lines.join('\n');
+}
+
 function allowedSender(from) {
   const allow = (process.env.ALLOWED_SENDERS || '')
     .toLowerCase()
@@ -153,6 +166,12 @@ app.http('ingest', {
     }
 
     context.log(`ingest result: added=${added.length} review=${review.length} skipped=${skipped.length}`);
-    return { status: 200, jsonBody: { added, review, skipped, commit } };
+    const summary = buildSummary({ added, review, skipped, commit, filename });
+    return {
+      status: 200,
+      // summaryHtml so the Logic App can drop it straight into the mail body —
+      // the Outlook connector renders Body as HTML and would eat the newlines.
+      jsonBody: { added, review, skipped, commit, summary, summaryHtml: summary.replace(/\n/g, '<br>') },
+    };
   },
 });
