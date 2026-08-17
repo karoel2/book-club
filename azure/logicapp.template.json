@@ -2,7 +2,7 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "metadata": {
-    "comment": "Consumption Logic App: poll an Outlook.com inbox, POST each attachment to the ingest function. Deliberately a POLLING ApiConnection trigger, not ApiConnectionNotification \u2014 the push/webhook variant depends on Outlook.com delivering a MailSubscriptionPoke to a callback URL, which silently never arrived. No subjectFilter and fetchOnlyWithAttachment=false, because a subject filter skips every other mail and phones often inline the screenshot. Attachment fields are PascalCase (ContentBytes/Name) on the Outlook.com connector; Office 365 would be camelCase. Send_summary uses POST /v2/Mail rather than a reply: every Reply path (/Mail/{id}/Reply, /v2/\u2026, /v3/\u2026) returns NotFound on the Outlook.com connector. It runs after Failed too, since a failed ingest is exactly when you want telling. For_each_attachment is sequential because parallel branches appending to one variable would race."
+    "comment": "Consumption Logic App: poll an Outlook.com inbox, POST each attachment to the ingest function. Deliberately a POLLING ApiConnection trigger, not ApiConnectionNotification \u2014 the push/webhook variant depends on Outlook.com delivering a MailSubscriptionPoke to a callback URL, which silently never arrived. No subjectFilter and fetchOnlyWithAttachment=false, because a subject filter skips every other mail and phones often inline the screenshot. Attachment fields are PascalCase (ContentBytes/Name) on the Outlook.com connector; Office 365 would be camelCase. Send_summary uses POST /v2/Mail rather than a reply: every Reply path (/Mail/{id}/Reply, /v2/\u2026, /v3/\u2026) returns NotFound on the Outlook.com connector. It runs after Failed too, since a failed ingest is exactly when you want telling. For_each_attachment is sequential because parallel branches appending to one variable would race. splitOn is REQUIRED: /v2/Mail/OnNewEmail returns {value:[\u2026]}, and without it every triggerBody()?['Attachments'] / ?['From'] is null. Empty-array fallback is json('[]'), not createArray(), which errors when called with no arguments."
   },
   "parameters": {
     "logicAppName": {
@@ -77,7 +77,8 @@
                   "fetchOnlyWithAttachment": false,
                   "includeAttachments": true
                 }
-              }
+              },
+              "splitOn": "@triggerBody()?['value']"
             }
           },
           "actions": {
@@ -101,7 +102,7 @@
                   "Succeeded"
                 ]
               },
-              "foreach": "@coalesce(triggerBody()?['Attachments'], createArray())",
+              "foreach": "@coalesce(triggerBody()?['Attachments'], json('[]'))",
               "runtimeConfiguration": {
                 "concurrency": {
                   "repetitions": 1
