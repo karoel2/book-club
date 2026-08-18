@@ -91,15 +91,15 @@ class BookBeatScraper(BaseAudiobookScraper):
         
         async with httpx.AsyncClient(follow_redirects=True) as client:
             response = await client.get(api_url, params=params, headers=headers)
-            
+
             if response.status_code != 200:
                 # Fallback to HTML scraping if API fails
                 return await self._fallback_bookbeat_search(query)
-            
+
             try:
                 data = response.json()
                 return data.get('books', [])
-            except:
+            except (json.JSONDecodeError, ValueError, KeyError):
                 return await self._fallback_bookbeat_search(query)
     
     async def _fallback_bookbeat_search(self, query: str) -> List[Dict[str, Any]]:

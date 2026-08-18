@@ -72,7 +72,7 @@ class BibliotekaRaczynskichScraper(BaseAudiobookScraper):
         # Build query using Primo VE syntax - use simple title search only
         # The API seems to have issues with complex queries
         query = f"any,contains,{title}"
-        
+
         # Primo VE API endpoint
         api_url = 'https://omnis-br.primo.exlibrisgroup.com/primaws/rest/pub/pnxs'
         params = {
@@ -81,31 +81,38 @@ class BibliotekaRaczynskichScraper(BaseAudiobookScraper):
             'limit': 10,
             # Use minimal parameters to avoid API issues
         }
-        
+
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
             'Accept': 'application/json',
             'Accept-Language': 'pl-PL,pl;q=0.9,en;q=0.8',
         }
-        
+
         # Use subprocess to call curl directly since the API blocks Python requests
         import subprocess
         import shlex
-        
+
         # Build curl command with proper URL encoding
         from urllib.parse import urlencode
         query_string = urlencode(params, quote_via=quote)
         curl_cmd = f"curl -s '{api_url}?{query_string}'"
-        
+
         try:
-            result = subprocess.run(shlex.split(curl_cmd), capture_output=True, text=True, timeout=15.0)
-            
+            # Run subprocess in thread pool to avoid blocking event loop
+            result = await asyncio.to_thread(
+                subprocess.run,
+                shlex.split(curl_cmd),
+                capture_output=True,
+                text=True,
+                timeout=15.0
+            )
+
             if result.returncode != 0:
                 raise Exception(f"Curl failed with return code {result.returncode}")
-            
+
             if not result.stdout:
                 raise Exception("Empty response from Primo VE API")
-            
+
             # Try to parse the response
             try:
                 data = json.loads(result.stdout)
@@ -115,7 +122,7 @@ class BibliotekaRaczynskichScraper(BaseAudiobookScraper):
                     raise Exception("Invalid response format from Primo VE API")
             except json.JSONDecodeError:
                 raise Exception("Cannot parse JSON response from Primo VE API")
-                
+
         except subprocess.TimeoutExpired:
             raise Exception("Primo VE API timeout")
         except Exception as e:

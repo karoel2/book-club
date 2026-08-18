@@ -5,7 +5,7 @@ Test script for Storytel availability checker
 
 import check_storytel_availability
 
-def test_book_availability():
+def demo_book_availability():
     """Test various book availability scenarios"""
     
     print("Testing Storytel Book Availability Checker")
@@ -65,4 +65,4 @@ def test_book_availability():
     print(f"   Formats: {result['formats']}")
 
 if __name__ == "__main__":
-    test_book_availability()
+    demo_book_availability()

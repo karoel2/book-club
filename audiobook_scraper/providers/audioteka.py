@@ -93,13 +93,13 @@ class AudiotekaScraper(BaseAudiobookScraper):
         async with httpx.AsyncClient(follow_redirects=True) as client:
             try:
                 response = await client.get(api_url, params=params, headers=headers)
-                
+
                 if response.status_code == 200:
                     data = response.json()
                     return data.get('items', [])
-            except:
+            except (httpx.HTTPError, json.JSONDecodeError, ValueError, KeyError):
                 pass
-            
+
             # Fallback to HTML scraping
             return await self._fallback_audioteka_search(query)
     

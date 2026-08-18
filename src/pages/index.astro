@@ -36,6 +36,9 @@ const nextMeeting = {
 
 const st = nextMeeting.storytel;
 const StorytelTag = st.available && st.url ? 'a' : 'span';
+const BookBeatTag = nextMeeting.bookbeat.available && nextMeeting.bookbeat.url ? 'a' : 'span';
+const AudiotekaTag = nextMeeting.audioteka.available && nextMeeting.audioteka.url ? 'a' : 'span';
+const LemimiTag = nextMeeting.legimi.available && nextMeeting.legimi.url ? 'a' : 'span';
 ---
 
 <Base title="Klub Książki — Ranking">
@@ -104,7 +107,7 @@ const StorytelTag = st.available && st.url ? 'a' : 'span';
               </StorytelTag>
               
               {/* BookBeat Icon */}
-              <a
+              <BookBeatTag
                 class:list={['storytel-tag', nextMeeting.bookbeat.available ? 'is-available' : 'is-missing']}
                 href={nextMeeting.bookbeat.available && nextMeeting.bookbeat.url ? nextMeeting.bookbeat.url : undefined}
                 target={nextMeeting.bookbeat.available && nextMeeting.bookbeat.url ? '_blank' : undefined}
@@ -147,10 +150,10 @@ const StorytelTag = st.available && st.url ? 'a' : 'span';
                 <span class="visually-hidden">
                   {nextMeeting.bookbeat.available ? 'dostępna na BookBeat' : 'niedostępna na BookBeat'}
                 </span>
-              </a>
-              
+              </BookBeatTag>
+
               {/* Audioteka Icon */}
-              <a
+              <AudiotekaTag
                 class:list={['storytel-tag', nextMeeting.audioteka.available ? 'is-available' : 'is-missing']}
                 href={nextMeeting.audioteka.available && nextMeeting.audioteka.url ? nextMeeting.audioteka.url : undefined}
                 target={nextMeeting.audioteka.available && nextMeeting.audioteka.url ? '_blank' : undefined}
@@ -193,10 +196,10 @@ const StorytelTag = st.available && st.url ? 'a' : 'span';
                 <span class="visually-hidden">
                   {nextMeeting.audioteka.available ? 'dostępna na Audioteka' : 'niedostępna na Audioteka'}
                 </span>
-              </a>
-              
+              </AudiotekaTag>
+
               {/* Legimi Icon */}
-              <a
+              <LemimiTag
                 class:list={['storytel-tag', nextMeeting.legimi.available ? 'is-available' : 'is-missing']}
                 href={nextMeeting.legimi.available && nextMeeting.legimi.url ? nextMeeting.legimi.url : undefined}
                 target={nextMeeting.legimi.available && nextMeeting.legimi.url ? '_blank' : undefined}
@@ -239,7 +242,7 @@ const StorytelTag = st.available && st.url ? 'a' : 'span';
                  <span class="visually-hidden">
                    {nextMeeting.legimi.available ? 'dostępna na Legimi' : 'niedostępna na Legimi'}
                  </span>
-               </a>
+               </LemimiTag>
                
                {/* Biblioteka Raczyńskich Icon */}
                <a

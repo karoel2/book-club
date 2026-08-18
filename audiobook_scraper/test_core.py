@@ -7,7 +7,7 @@ import asyncio
 from audiobook_scraper import AudiobookChecker
 
 
-async def test_scraper():
+async def demo_scraper():
     """Test the audiobook scraper with various books."""
     
     checker = AudiobookChecker()
@@ -49,4 +49,4 @@ async def test_scraper():
 
 
 if __name__ == "__main__":
-    asyncio.run(test_scraper())
+    asyncio.run(demo_scraper())
