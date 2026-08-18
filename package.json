@@ -9,7 +9,8 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "ingest": "node scripts/ingest.mjs"
+    "ingest": "node scripts/ingest.mjs",
+    "test": "node --test scripts/**/*.test.mjs"
   },
   "dependencies": {
     "astro": "^7.1.4"

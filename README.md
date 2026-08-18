@@ -129,30 +129,35 @@ macOS gotchas:
 ## Add a book by email (serverless, no computer)
 
 Instead of keeping a Mac running cron, you can **email a screenshot from your phone**
-and have the site update itself. An **Azure Function** plus a **Logic App** watching a
-Gmail inbox do exactly what the CLI does — OCR → parse → enrich → commit to GitHub
+and have the site update itself. An **Azure Function** plus a **Logic App** watching an
+**Outlook** inbox do exactly what the CLI does — OCR → parse → enrich → commit to GitHub
 (which triggers the Pages build). The parsing and enrichment are the *same shared code*
 (`scripts/lib/parse.mjs`, `scripts/metadata.mjs`); only the OCR engine differs
 (macOS Vision → **Azure AI Vision**, which reads Polish fine). Cost is ≈ $0 on the free tiers.
 
-**Day-to-day use:** attach the screenshot to an email and send it from your
-allow-listed Gmail address to the watched mailbox. Within a couple of minutes the
-book appears on the site. Same safety net as the CLI — a misread score or an
-unrecognised name comes back as *needs review* and is **not** published; you can
-reply-email the result to yourself for confirmation.
+**This is already deployed** — resource names, region and constraints are in
+**[azure/README.md](azure/README.md)**. To re-converge it after a change:
 
-**One-time setup** (~15 min) — full walkthrough with copy-paste commands in
-**[azure/README.md](azure/README.md)**. In short:
+```bash
+cd azure && ALLOWED_SENDERS=you@example.com ./provision.sh
+```
 
-1. Create a fine-grained **GitHub token** (Contents: read & write, this repo only).
-2. Provision with the Azure CLI: a resource group, an **Azure AI Vision** resource
-   (free **F0** tier), and a **Function App** (Consumption, Node 20); put the keys
-   in the function's app settings (`VISION_*`, `GITHUB_TOKEN`, `GITHUB_REPO`,
-   `INGEST_SECRET`, `ALLOWED_SENDERS`).
-3. Deploy the function: `cd azure && npm install && npm run sync && func azure functionapp publish <app>`.
-4. Create a **Logic App (Consumption)**, add the **Gmail → "When a new email
-   arrives"** trigger (authorise Google), filter to your sender, and POST each
-   attachment to the function URL. `azure/logicapp.workflow.json` mirrors these steps.
+### Day-to-day use
+
+Send the screenshot to the watched mailbox from the allow-listed address. Within a
+couple of minutes the book appears on the site.
+
+- **No special subject** — any subject works, including an empty one. (An earlier
+  version required `book-club` in the subject, which silently swallowed everything else.)
+- **Attach the image as a file.** A pasted/inline image still triggers the workflow,
+  but there's no attachment to OCR, so nothing happens.
+- **Sender must match `ALLOWED_SENDERS`**, or the function replies `403` and ignores it.
+  With no subject filter, this allow-list is the only gate on the inbox.
+- **Watch out for Focused Inbox** — mail sorted into "Other" is never seen by the trigger.
+
+Same safety net as the CLI: a misread score or an unrecognised name comes back as
+*needs review* and is **not** published. Re-sending the same screenshot is a no-op —
+books that already exist are skipped.
 
 The endpoint is protected three ways (function key, a shared-secret header, and the
 sender allow-list). The local cron/CLI route above still works as an offline fallback.

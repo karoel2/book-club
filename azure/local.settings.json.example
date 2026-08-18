@@ -15,6 +15,6 @@
     "GOOGLE_BOOKS_API_KEY": "",
 
     "INGEST_SECRET": "<long-random-string, must match the Logic App header>",
-    "ALLOWED_SENDERS": "you@gmail.com"
+    "ALLOWED_SENDERS": "you@example.com"
   }
 }

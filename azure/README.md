@@ -1,14 +1,15 @@
 # Serverless email → site ingest (Azure)
 
-Email a book-club screenshot from your phone (Gmail) and the site updates itself —
-no Mac, no cron. A Logic App watches a Gmail inbox and POSTs each attachment to an
-Azure Function that OCRs it, parses the scores, enriches metadata, and commits to
-GitHub — which triggers the existing Pages build.
+Email a book-club screenshot from your phone and the site updates itself —
+no Mac, no cron. A Logic App watches an **Outlook** inbox and POSTs each attachment
+to an Azure Function that OCRs it, parses the scores, enriches metadata, and commits
+to GitHub — which triggers the existing Pages build.
 
 ```
-Gmail (screenshot) → Logic App (new-mail trigger, sender allowlist)
-  → HTTP POST → Function: Azure Vision OCR → parse → enrich (Google Books/OL)
+Outlook (screenshot) → Logic App (new-mail trigger)
+  → Function: Azure Vision OCR → parse → enrich (Google Books/OL)
   → single GitHub commit (books.json + cover) → Pages rebuilds
+  ↑ sender allowlist enforced by the function, not the Logic App
 ```
 
 The only difference from the local CLI is the OCR engine: macOS Vision (`ocr.swift`)
@@ -17,78 +18,140 @@ The only difference from the local CLI is the OCR engine: macOS Vision (`ocr.swi
 
 ## Cost
 Effectively **$0**: Functions Consumption free grant, Azure AI Vision **F0** (~5k
-scans/mo), Logic App Consumption + Gmail connector within free limits.
+scans/mo), Logic App Consumption + Outlook connector within free limits.
 
 ---
 
-## 1. GitHub token
-Create a **fine-grained PAT** with **Contents: Read and write** on the site repo only.
-Save it for `GITHUB_TOKEN`.
+## Current deployment
 
-## 2. Provision Azure (CLI)
+This is already provisioned. **This repo is public, so the real resource names are
+not committed** — they live in `azure/deployment.local.sh`, which is git-ignored.
+Copy `deployment.local.sh.example` to create it; `provision.sh` and
+`authorize-outlook.sh` both source it automatically.
+
 ```bash
-RG=bookclub-rg; LOC=westeurope; PREFIX=bookclub$RANDOM
-
-az group create -n $RG -l $LOC
-
-# Azure AI Vision (free F0)
-az cognitiveservices account create -n ${PREFIX}-vision -g $RG \
-  --kind ComputerVision --sku F0 -l $LOC --yes
-VISION_ENDPOINT=$(az cognitiveservices account show -n ${PREFIX}-vision -g $RG --query properties.endpoint -o tsv)
-VISION_KEY=$(az cognitiveservices account keys list -n ${PREFIX}-vision -g $RG --query key1 -o tsv)
-
-# Storage (required by Functions) + Function App (Consumption, Node 20, Linux)
-az storage account create -n ${PREFIX}st -g $RG -l $LOC --sku Standard_LRS
-az functionapp create -n ${PREFIX}-fn -g $RG \
-  --storage-account ${PREFIX}st --consumption-plan-location $LOC \
-  --runtime node --runtime-version 20 --functions-version 4 --os-type Linux
-
-# Secrets / config
-az functionapp config appsettings set -n ${PREFIX}-fn -g $RG --settings \
-  VISION_ENDPOINT="$VISION_ENDPOINT" VISION_KEY="$VISION_KEY" \
-  GITHUB_TOKEN="<pat>" GITHUB_REPO="<owner>/<repo>" GITHUB_BRANCH="main" \
-  GOOGLE_BOOKS_COUNTRY="PL" \
-  INGEST_SECRET="$(openssl rand -hex 24)" \
-  ALLOWED_SENDERS="you@gmail.com"
+source azure/deployment.local.sh   # then $RG, $FN, $VISION, $LA … are set
+az resource list -g "$RG" --query "[].{name:name,type:type}" -o table
 ```
 
-## 3. Deploy the function
+The stack is a resource group holding an Azure AI Vision (F0) resource, a storage
+account, a Function App (Linux Consumption, Node 20, Functions v4), a Logic App
+(Consumption) and its mail API connection.
+
+Three constraints worth knowing before you change anything:
+
+- **Region policy.** The subscription restricts which regions may be deployed to;
+  anything else fails with `RequestDisallowedByAzure`. West Europe — what earlier
+  versions of this file recommended — is *not* permitted. Check yours:
+  ```bash
+  az policy assignment list --query "[].parameters.listOfAllowedLocations.value"
+  ```
+  Whatever you pick must also serve Vision **Image Analysis 4.0 `read`**, which is
+  not in every region.
+- **One free F0 Computer Vision per subscription**, and it is already used. Never
+  delete and re-create it casually — you may not get the free tier back.
+- **The mail trigger is the Outlook.com *consumer* connector**
+  (`managedApis/outlook`, trigger V2, PascalCase attachment fields
+  `ContentBytes`/`Name`) — not Office 365. Re-creating a `Microsoft.Web/connections`
+  resource drops its OAuth consent, so never PUT over the existing connection.
+
+## Provisioning / re-converging
+
 ```bash
 cd azure
-npm install
-npm run sync                       # copies parse.mjs + metadata.mjs into src/shared/
-func azure functionapp publish ${PREFIX}-fn --build remote
+ALLOWED_SENDERS=you@example.com ./provision.sh
 ```
-Grab the invoke URL + key:
+
+Idempotent and adopt-first: it reuses every existing resource, keeps the current
+`INGEST_SECRET`, redeploys the function code, relaxes the mail-trigger filters
+(via `scripts/patch-logicapp.mjs`), and finishes with a health check. It reads the
+GitHub token from `gh auth token` unless you export `GITHUB_TOKEN` — a fine-grained
+PAT with **Contents: Read and write** on the site repo is the tighter option.
+
+App settings it manages: `VISION_ENDPOINT`, `VISION_KEY`, `GITHUB_TOKEN`,
+`GITHUB_REPO`, `GITHUB_BRANCH`, `GOOGLE_BOOKS_COUNTRY`, `INGEST_SECRET`,
+`ALLOWED_SENDERS`.
+
+To deploy code only:
 ```bash
-az functionapp function keys list -n ${PREFIX}-fn -g $RG --function-name ingest
-# URL: https://${PREFIX}-fn.azurewebsites.net/api/ingest?code=<default key>
+cd azure && source deployment.local.sh
+npm install && npm run sync && func azure functionapp publish "$FN" --build remote
 ```
 
-## 4. Logic App + Gmail (Designer — Gmail needs interactive OAuth)
-1. **Create** → *Logic App (Consumption)* in `$RG`, open the **Designer**.
-2. Trigger: **Gmail → "When a new email arrives"**. Sign in / authorise your Google
-   account. Set *Label* = `INBOX`, *Include Attachments* = **Yes** (optionally a
-   subject filter like `ksiazka`).
-3. Add **Control → Condition**: `From` **contains** `you@gmail.com`
-   (your allowlisted sender). In the *If true* branch:
-4. **Control → For each** over the trigger's **Attachments**, then inside it
-   **HTTP** action:
-   - Method `POST`, URI = the function URL **including `?code=`**.
-   - Header `x-ingest-secret` = your `INGEST_SECRET`.
-   - Body:
-     ```json
-     { "contentBase64": "<Attachments Content-Bytes>", "filename": "<Attachments Name>", "from": "<From>" }
-     ```
-     (pick `Content-Bytes`, `Name`, `From` from dynamic content).
-5. *(Optional)* add **Gmail → "Reply to email"** using the HTTP response
-   (`@body('HTTP')?['added']`) so you get a confirmation on your phone.
-6. **Save**. `logicapp.workflow.json` here mirrors these steps for the Code view.
+Invoke URL + key:
+```bash
+az functionapp keys list -n "$FN" -g "$RG" --query functionKeys.default -o tsv
+# URL: $FN_HOST/api/ingest?code=<key>
+```
 
-## 5. Test end-to-end
-Email a screenshot from the allowlisted address → watch the Logic App **run
-history** go green → a new commit appears in the repo → the Pages workflow runs →
-the book shows on the site. Sending from another address is ignored.
+## The Logic App
+
+The deployed workflow polls the Inbox roughly every 3 minutes and, for each
+attachment, calls the `ingest` function directly (a `Function`-type action, so no
+URL or `?code=` to keep in sync). `provision.sh` keeps two settings correct, and
+both matter more than they look:
+
+- **no `subjectFilter`** — a subject filter silently skips every mail that doesn't
+  match, and shows up only as `Fired: False` in Trigger History.
+- **`fetchOnlyWithAttachment: false`** — phone mail apps often embed a screenshot
+  inline rather than as a real attachment.
+
+If the OAuth consent ever expires, `./authorize-outlook.sh` walks the connection
+through re-consent (that sign-in is the one step that genuinely cannot be scripted).
+
+### Confirmation email
+
+After the attachments are processed the workflow mails a summary back to the
+sender, so a `review` book announces itself instead of vanishing:
+
+```
+✅ Dodano: Achaja
+⚠️ Do przeglądu: „Kiedy żurawie…, Lisa Ridzen" — Nie wiadomo, co jest tytułem…
+↩️ Już na stronie: Wiedźmin
+
+Commit: b966510
+(screenshot.jpg)
+```
+
+The text is built by the function (`buildSummary` in `src/functions/ingest.mjs`)
+and returned as `summary` / `summaryHtml`, because Logic App expressions have no
+sane way to format a list of notes. Three things about the workflow side:
+
+- It **sends** (`POST /v2/Mail`) rather than replying. Every reply path —
+  `/Mail/{id}/Reply`, `/v2/…`, `/v3/…` — returns `NotFound` on the Outlook.com
+  connector; only send exists. So the confirmation is a new mail, subject
+  `Re: <original>`.
+- `Send_summary` runs after `Failed` as well as `Succeeded` — a failed ingest is
+  exactly when you want to be told.
+- `For_each_attachment` is **sequential** (`concurrency.repetitions: 1`), because
+  parallel branches appending to one variable would race and lose lines.
+
+Three reference definitions live here. Only the first reflects what is deployed:
+
+| File | What it is |
+|---|---|
+| *(live in Azure)* | Outlook.com connector, trigger V2, `ContentBytes`/`Name` |
+| `logicapp.outlook.workflow.json` | Office 365 variant, trigger V3, `contentBytes`/`name` — for a work/school mailbox |
+| `logicapp.workflow.json` | the original Gmail variant, kept for reference only |
+
+## Sending mail / testing end-to-end
+
+Email a screenshot from the allowlisted address → the Logic App **run history** goes
+green → a commit appears in the repo → the Pages workflow runs → the book shows on
+the site. The rules for a mail that actually gets processed:
+
+- **No special subject.** Any subject works, including an empty one — there is
+  deliberately no `subjectFilter` on the trigger.
+- **Attach the image as a file.** Inline/pasted images still fire the trigger
+  (`fetchOnlyWithAttachment: false`), but the attachment loop is empty so nothing
+  is OCR'd.
+- **The sender must match `ALLOWED_SENDERS`.** With no subject filter, this is the
+  only gate on the inbox; everything else gets `403` and is ignored.
+- **Focused Inbox off** for that mailbox, or mail sorted to "Other" is never seen.
+- The trigger polls **every ~3 minutes** and only sees mail that arrives after it
+  was created.
+
+Re-sending the same screenshot is a no-op — existing books come back under `skipped`.
 
 ## Local development
 ```bash
@@ -97,21 +160,44 @@ cp local.settings.json.example local.settings.json   # fill in the values
 npm install && npm start                              # runs `sync` then `func start`
 
 # simulate the Logic App call with a real screenshot:
-B64=$(base64 -i ../data/received_995736336268004.jpeg)
-curl -s -X POST "http://localhost:7071/api/ingest" \
-  -H "content-type: application/json" -H "x-ingest-secret: <INGEST_SECRET>" \
-  -d "{\"contentBase64\":\"$B64\",\"filename\":\"t.jpeg\",\"from\":\"you@gmail.com\"}" | jq
+FUNC_URL=http://localhost:7071/api/ingest SECRET=<INGEST_SECRET> FROM=you@example.com DRY=1 \
+  ./scripts/test-ingest.sh ../data/received_995736336268004.jpeg
 ```
 (Needs a real `VISION_*` and `GITHUB_*` in `local.settings.json`; the commit lands on
 `GITHUB_BRANCH`, so point it at a test branch while trying things out.)
 
 ## Security notes
 - The endpoint is protected three ways: the function key (`?code=`), the
-  `x-ingest-secret` header, and the `ALLOWED_SENDERS` allowlist.
+  `x-ingest-secret` header, and the `ALLOWED_SENDERS` allowlist. Verified: a wrong
+  secret gets `401`, a non-allowlisted sender gets `403`.
 - Keep `GITHUB_TOKEN` / `VISION_KEY` only in Function app settings (or Key Vault),
   never in the repo. `local.settings.json` is git-ignored.
 - Same safety as the CLI: strict metadata matching, no-author books skipped,
   low-confidence parses returned as `review` (not committed).
+
+### `review`, and how an ambiguous header resolves
+
+Each book comes back as `added` (committed), `skipped` (already in `books.json`)
+or `review` (parsed, but something looked wrong — deliberately not committed).
+You don't have to go looking for `review` any more — the workflow emails the
+outcome back to whoever sent the screenshot (see *Confirmation email* below).
+It is still only a field in the response, so the run history remains the
+fallback if the mail itself fails.
+
+A header like `Kiedy żurawie odlatują na południe, Lisa Ridzen` used to go
+straight to `review`, because nothing marks which side is the author. Now
+`splitTitleAuthor` emits ranked candidates — every comma position, both
+orderings, and finally the whole header as a title — and `resolveHeader` asks
+Google Books / Open Library which reading actually exists. First confirmed
+candidate wins, and its metadata is reused so the book isn't fetched twice.
+A title that merely *contains* a comma (`Dziki, mroczny brzeg`) resolves to
+itself via that last candidate. Headers where an initial already decides the
+split (`Wiedźmin, A. Sapkowski`) never hit the network at all.
+
+> **Set `GOOGLE_BOOKS_API_KEY`.** Without one, Google Books is rate-limited per
+> IP and returns HTTP 429 once the daily quota is gone — resolution then falls
+> back to Open Library alone, which misses many Polish editions, and books that
+> would resolve fine land in `review` instead.
 
 ## Notes
 - `src/shared/` is generated by `npm run sync` and git-ignored — edit the originals
@@ -120,14 +206,12 @@ curl -s -X POST "http://localhost:7071/api/ingest" \
 
 ## Troubleshooting
 
-> The `health` route, `dryRun`, and the `text` option below only exist after you
-> **redeploy**: `cd azure && npm run sync && func azure functionapp publish <app>`.
-
 Work from the function outward — prove the function is healthy first, then the email trigger.
 
 ### 1. Is the function configured? (`/api/health`)
 ```bash
-curl "https://<app>.azurewebsites.net/api/health?code=<function-key>"
+source deployment.local.sh
+curl "$FN_HOST/api/health?code=<function-key>"
 ```
 Expect `visionConfigured`, `githubConfigured`, `ingestSecretSet` = `true`, `allowlistCount` ≥ 1,
 and `github: "ok"` with a `books` count. Anything `false`/`error` is a missing/wrong app
@@ -135,13 +219,13 @@ setting or a bad `GITHUB_TOKEN`/`GITHUB_REPO` — fix that before anything else.
 
 ### 2. Does the function work end-to-end? (bypass email)
 ```bash
-FUNC_URL="https://<app>.azurewebsites.net/api/ingest?code=<key>" \
-SECRET="<INGEST_SECRET>" FROM="you@outlook.com" DRY=1 \
+FUNC_URL="$FN_HOST/api/ingest?code=<key>" \
+SECRET="<INGEST_SECRET>" FROM="$ALLOWED_SENDERS" DRY=1 \
 ./scripts/test-ingest.sh ../data/received_995736336268004.jpeg
 ```
 `DRY=1` returns the OCR text + parsed books and **commits nothing**. If you get back
 sensible `parsed` entries, then **OCR + parse + GitHub-read all work, and the problem is the
-Outlook trigger** — go to §4. Drop `DRY=1` (point `GITHUB_BRANCH` at a throwaway branch first)
+mail trigger** — go to §4. Drop `DRY=1` (point `GITHUB_BRANCH` at a throwaway branch first)
 to test a real commit.
 
 ### 3. Reading the function's answer
@@ -158,27 +242,32 @@ to test a real commit.
 Live logs: Function App → **Log stream** (or Application Insights). Every call logs
 `ocrChars`, `blocks`, and `added/review/skipped`.
 
-### 4. "No Logic App run at all" — the Outlook trigger isn't firing
+### 4. "No Logic App run at all" — the mail trigger isn't firing
 Check in this order:
-1. **Trigger History ≠ Runs.** A trigger that fires but skips shows only under the Logic
-   App's **Trigger History**, not Runs. Look there first.
-2. **Focused Inbox.** If the mail lands in **Other**, the Inbox trigger misses it. Turn off
-   Focused Inbox for that mailbox, or add a rule moving the sender to Focused/Inbox.
+1. **Trigger History ≠ Runs.** A trigger that polls but matches nothing shows only under the
+   Logic App's **Trigger History** as `Fired: False`, never in Runs. Look there first — this
+   is the single most common symptom.
+2. **Subject filter.** A leftover `subjectFilter` skips every mail that doesn't contain it.
+   `provision.sh` strips it; check Code view if you edited the trigger by hand.
 3. **Inline vs real attachment.** Phone mail apps often embed the screenshot **inline**, not
-   as an attachment. Send it as a real **attachment** (Files, not the photo body), or keep
-   `fetchOnlyWithAttachment: false` so the mail still triggers.
-4. **Folder** — the trigger's *Folder* must be the one the mail actually reaches (`Inbox`),
+   as an attachment. Keep `fetchOnlyWithAttachment: false` so the mail still triggers.
+4. **Focused Inbox.** If the mail lands in **Other**, the Inbox trigger misses it. Turn off
+   Focused Inbox for that mailbox, or add a rule moving the sender to Focused/Inbox.
+5. **Folder** — the trigger's *Folder* must be the one the mail actually reaches (`Inbox`),
    not Junk or a rule folder.
-5. **Connection & Enabled** — the Office 365 connection is authorised to the **same mailbox**
-   you're emailing and not expired; the Logic App resource is **Enabled**.
-6. **Polling** — the trigger polls (~3 min) and only sees mail arriving *after* it was
+6. **Connection & Enabled** — the mail connection (`$CONN`) is authorised to the **same
+   mailbox** you're emailing and not expired; the Logic App resource is **Enabled**.
+7. **Polling** — the trigger polls (~3 min) and only sees mail arriving *after* it was
    created. Use **Run Trigger** to force a poll, or wait a cycle.
-7. **Filters** — drop any subject/importance filter while testing.
 
-`logicapp.outlook.workflow.json` is a corrected Office 365 definition (right field names
-`contentBytes`/`name`/`from`, `folderPath: Inbox`) you can paste into the Logic App **Code
-view** if you'd rather replace the trigger wholesale.
+Inspect the live trigger without opening the portal:
+```bash
+source deployment.local.sh
+SUB=$(az account show --query id -o tsv)
+az rest --method get --uri "https://management.azure.com/subscriptions/$SUB/resourceGroups/$RG/providers/Microsoft.Logic/workflows/$LA/triggers/When_a_new_email_arrives_%28V2%29/histories?api-version=2016-06-01&\$top=5" \
+  --query "value[].{start:properties.startTime,status:properties.status,fired:properties.fired}" -o table
+```
 
 ### Debugging parsing without a Vision key
-POST `{ "text": "<paste OCR/plain text>", "dryRun": true, "from": "you@outlook.com" }` to
+POST `{ "text": "<paste OCR/plain text>", "dryRun": true, "from": "you@example.com" }` to
 `/api/ingest` to run the parser on text you supply — handy for reproducing a bad parse locally.

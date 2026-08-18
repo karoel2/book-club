@@ -8,8 +8,8 @@
 //   - text: skip OCR and parse this text directly (test parsing without Vision).
 // Auth: function key (?code=) + a shared secret header + optional sender allowlist.
 import { app } from '@azure/functions';
-import { parseBlocks, finalizeBook, buildRoster, slugify, serializeBooks } from '../shared/parse.mjs';
-import { fetchMetadata, pickBestCover } from '../shared/metadata.mjs';
+import { parseBlocks, finalizeBook, buildRoster, slugify, serializeBooks, applyHeaderResolution } from '../shared/parse.mjs';
+import { fetchMetadata, pickBestCover, resolveHeader } from '../shared/metadata.mjs';
 import { ocrImage } from '../ocr.mjs';
 import { loadBooksJson, commitChanges } from '../github.mjs';
 
@@ -18,6 +18,19 @@ function extractFrom(from) {
   if (!from) return '';
   if (typeof from === 'string') return from;
   return from.emailAddress?.address || from.address || from.email || JSON.stringify(from);
+}
+
+// A human-readable outcome for the confirmation email. Built here rather than in
+// Logic App expressions, which have no good way to format a list of notes.
+function buildSummary({ added, review, skipped, commit, filename }) {
+  const lines = [];
+  if (added.length) lines.push(`✅ Dodano: ${added.join(', ')}`);
+  for (const r of review) lines.push(`⚠️ Do przeglądu: „${r.title}" — ${r.notes.join('; ')}`);
+  if (skipped.length) lines.push(`↩️ Już na stronie: ${skipped.join(', ')}`);
+  if (!lines.length) lines.push('Nie rozpoznano żadnych ocen na tym zrzucie.');
+  if (commit) lines.push('', `Commit: ${String(commit).slice(0, 7)}`);
+  lines.push('', `(${filename})`);
+  return lines.join('\n');
 }
 
 function allowedSender(from) {
@@ -74,6 +87,18 @@ app.http('ingest', {
     const parsed = parseBlocks(text).map((b) => finalizeBook(b, roster, false));
     context.log(`ingest ${filename} from "${from}": ocrChars=${text.length} blocks=${parsed.length} dryRun=${dryRun}`);
 
+    // An ambiguous "A, B" header used to go straight to review. Instead, ask the
+    // book databases which reading actually exists — a title that merely contains
+    // a comma resolves to itself, so it no longer costs a human's attention.
+    for (const p of parsed) {
+      if (!p.ambiguous || !p.blocking.length) continue;
+      const hit = await resolveHeader(p.candidates);
+      if (!hit) continue;
+      applyHeaderResolution(p, hit);
+      p.resolvedMeta = hit.meta; // reuse below; don't fetch the same book twice
+      context.log(`resolved header → title="${hit.title}" author="${hit.author || '—'}"`);
+    }
+
     if (dryRun) {
       return {
         status: 200,
@@ -88,6 +113,7 @@ app.http('ingest', {
             scores: p.entry.scores,
             slug: p.slug,
             exists: existing.has(p.slug),
+            resolved: !!p.resolvedMeta,
             ocrAverage: p.ocrAverage,
             computedAverage: p.computedAverage,
             blocking: p.blocking,
@@ -106,9 +132,9 @@ app.http('ingest', {
       if (existing.has(p.slug)) { skipped.push(p.entry.title); continue; }
       if (p.blocking.length) { review.push({ title: p.entry.title, notes: p.notes }); continue; }
 
-      if (p.entry.author) {
+      if (p.resolvedMeta || p.entry.author) {
         try {
-          const meta = await fetchMetadata(p.entry.title, p.entry.author);
+          const meta = p.resolvedMeta || (await fetchMetadata(p.entry.title, p.entry.author));
           if (meta) {
             if (meta.description) p.entry.description = meta.description;
             if (meta.categories?.length) p.entry.categories = meta.categories;
@@ -140,6 +166,12 @@ app.http('ingest', {
     }
 
     context.log(`ingest result: added=${added.length} review=${review.length} skipped=${skipped.length}`);
-    return { status: 200, jsonBody: { added, review, skipped, commit } };
+    const summary = buildSummary({ added, review, skipped, commit, filename });
+    return {
+      status: 200,
+      // summaryHtml so the Logic App can drop it straight into the mail body —
+      // the Outlook connector renders Body as HTML and would eat the newlines.
+      jsonBody: { added, review, skipped, commit, summary, summaryHtml: summary.replace(/\n/g, '<br>') },
+    };
   },
 });

@@ -33,8 +33,8 @@ import {
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve, basename, extname } from 'node:path';
-import { fetchMetadata, downloadBestCover } from './metadata.mjs';
-import { slugify, parseBlocks, finalizeBooks, buildRoster, serializeBooks } from './lib/parse.mjs';
+import { fetchMetadata, downloadBestCover, resolveHeader } from './metadata.mjs';
+import { slugify, parseBlocks, finalizeBooks, buildRoster, serializeBooks, applyHeaderResolution } from './lib/parse.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
@@ -204,6 +204,16 @@ async function main() {
     }
 
     const all = finalizeBooks(parseBlocks(text, roster), roster, STRICT);
+    // An ambiguous "A, B" header goes to the book databases before it goes to a
+    // human: whichever reading actually exists wins, and a title that merely
+    // contains a comma resolves to itself.
+    for (const p of all) {
+      if (!p.ambiguous || !p.blocking.length) continue;
+      const hit = await resolveHeader(p.candidates);
+      if (!hit) continue;
+      applyHeaderResolution(p, hit);
+      log(`      · rozpoznano w bazie: „${hit.title}" — ${hit.author || 'bez autora'}`);
+    }
     // Edge-cut fragments are noise, not candidates: they neither publish nor
     // send the image to review.
     const parsed = all.filter((p) => !p.fragment);

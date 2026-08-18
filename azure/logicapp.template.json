@@ -1,0 +1,180 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "comment": "Consumption Logic App: poll an Outlook.com inbox, POST each attachment to the ingest function. Deliberately a POLLING ApiConnection trigger, not ApiConnectionNotification \u2014 the push/webhook variant depends on Outlook.com delivering a MailSubscriptionPoke to a callback URL, which silently never arrived. No subjectFilter and fetchOnlyWithAttachment=false, because a subject filter skips every other mail and phones often inline the screenshot. Attachment fields are PascalCase (ContentBytes/Name) on the Outlook.com connector; Office 365 would be camelCase. Send_summary uses POST /v2/Mail rather than a reply: every Reply path (/Mail/{id}/Reply, /v2/\u2026, /v3/\u2026) returns NotFound on the Outlook.com connector. It runs after Failed too, since a failed ingest is exactly when you want telling. For_each_attachment is sequential because parallel branches appending to one variable would race. splitOn is REQUIRED: /v2/Mail/OnNewEmail returns {value:[\u2026]}, and without it every triggerBody()?['Attachments'] / ?['From'] is null. Empty-array fallback is json('[]'), not createArray(), which errors when called with no arguments."
+  },
+  "parameters": {
+    "logicAppName": {
+      "type": "string"
+    },
+    "connectionName": {
+      "type": "string"
+    },
+    "functionId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource id of the ingest function"
+      }
+    },
+    "ingestSecret": {
+      "type": "securestring"
+    },
+    "pollMinutes": {
+      "type": "int",
+      "defaultValue": 3
+    }
+  },
+  "variables": {
+    "outlookApiId": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/outlook')]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Logic/workflows",
+      "apiVersion": "2019-05-01",
+      "name": "[parameters('logicAppName')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "state": "Enabled",
+        "parameters": {
+          "$connections": {
+            "value": {
+              "outlook": {
+                "connectionId": "[resourceId('Microsoft.Web/connections', parameters('connectionName'))]",
+                "connectionName": "[parameters('connectionName')]",
+                "id": "[variables('outlookApiId')]"
+              }
+            }
+          }
+        },
+        "definition": {
+          "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {
+            "$connections": {
+              "type": "Object",
+              "defaultValue": {}
+            }
+          },
+          "triggers": {
+            "When_a_new_email_arrives": {
+              "type": "ApiConnection",
+              "recurrence": {
+                "frequency": "Minute",
+                "interval": "[parameters('pollMinutes')]"
+              },
+              "inputs": {
+                "host": {
+                  "connection": {
+                    "name": "@parameters('$connections')['outlook']['connectionId']"
+                  }
+                },
+                "method": "get",
+                "path": "/v2/Mail/OnNewEmail",
+                "queries": {
+                  "folderPath": "Inbox",
+                  "importance": "Any",
+                  "fetchOnlyWithAttachment": false,
+                  "includeAttachments": true
+                }
+              },
+              "splitOn": "@triggerBody()?['value']"
+            }
+          },
+          "actions": {
+            "Init_summary": {
+              "type": "InitializeVariable",
+              "runAfter": {},
+              "inputs": {
+                "variables": [
+                  {
+                    "name": "summary",
+                    "type": "String",
+                    "value": ""
+                  }
+                ]
+              }
+            },
+            "For_each_attachment": {
+              "type": "Foreach",
+              "runAfter": {
+                "Init_summary": [
+                  "Succeeded"
+                ]
+              },
+              "foreach": "@coalesce(triggerBody()?['Attachments'], json('[]'))",
+              "runtimeConfiguration": {
+                "concurrency": {
+                  "repetitions": 1
+                }
+              },
+              "actions": {
+                "Call_ingest": {
+                  "type": "Function",
+                  "runAfter": {},
+                  "inputs": {
+                    "function": {
+                      "id": "[parameters('functionId')]"
+                    },
+                    "method": "POST",
+                    "headers": {
+                      "x-ingest-secret": "[parameters('ingestSecret')]"
+                    },
+                    "body": {
+                      "contentBase64": "@items('For_each_attachment')?['ContentBytes']",
+                      "filename": "@items('For_each_attachment')?['Name']",
+                      "from": "@triggerBody()?['From']"
+                    }
+                  }
+                },
+                "Append_result": {
+                  "type": "AppendToStringVariable",
+                  "runAfter": {
+                    "Call_ingest": [
+                      "Succeeded"
+                    ]
+                  },
+                  "inputs": {
+                    "name": "summary",
+                    "value": "@{body('Call_ingest')?['summaryHtml']}<br><br>"
+                  }
+                }
+              }
+            },
+            "Send_summary": {
+              "type": "ApiConnection",
+              "runAfter": {
+                "For_each_attachment": [
+                  "Succeeded",
+                  "Failed"
+                ]
+              },
+              "inputs": {
+                "host": {
+                  "connection": {
+                    "name": "@parameters('$connections')['outlook']['connectionId']"
+                  }
+                },
+                "method": "post",
+                "path": "/v2/Mail",
+                "body": {
+                  "To": "@triggerBody()?['From']",
+                  "Subject": "@{if(empty(trim(coalesce(triggerBody()?['Subject'], ''))), 'Klub Ksi\u0105\u017cki \u2014 zrzut', concat('Re: ', triggerBody()?['Subject']))}",
+                  "Body": "@{if(empty(variables('summary')), 'Nie uda\u0142o si\u0119 przetworzy\u0107 tego zrzutu \u2014 sprawd\u017a histori\u0119 uruchomie\u0144 Logic App.', variables('summary'))}",
+                  "Importance": "Normal"
+                }
+              }
+            }
+          },
+          "outputs": {}
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "logicAppName": {
+      "type": "string",
+      "value": "[parameters('logicAppName')]"
+    }
+  }
+}
