@@ -21,3 +21,10 @@ azure/.python_packages/
 *.log
 .env
 .env.production
+
+# python
+__pycache__/
+*.pyc
+
+# scratch api dumps
+response.json

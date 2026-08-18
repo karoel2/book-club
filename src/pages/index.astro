@@ -16,6 +16,22 @@ const nextMeeting = {
     available: true,
     url: 'https://www.storytel.com/pl/books/12416128',
   },
+  bookbeat: {
+    available: false,
+    url: 'https://www.bookbeat.pl/szukaj?query=Problem+trzech+ci%C5%82',
+  },
+  audioteka: {
+    available: false,
+    url: 'https://www.audioteka.com/pl/pl/search?query=Problem+trzech+ci%C5%82',
+  },
+  legimi: {
+    available: false,
+    url: 'https://www.legimi.pl/ebooki/?format=unlimited_audio&query=Problem+trzech+ci%C5%82',
+  },
+  biblioteka_raczynskich: {
+    available: true,
+    url: 'https://omnis-br.primo.exlibrisgroup.com/discovery/search?query=any,contains,Problem%20trzech%20cia%C5%82&tab=LibraryCatalog&search_scope=MyInstitution2&vid=48OMNIS_BRP:BRACZ&offset=0',
+  },
 };
 
 const st = nextMeeting.storytel;
@@ -41,7 +57,8 @@ const StorytelTag = st.available && st.url ? 'a' : 'span';
             <span class="next-meeting-meta">
               <span class="next-meeting-title">{nextMeeting.title}</span>
               <span class="next-meeting-sub">{nextMeeting.author}</span>
-              <StorytelTag
+              <div class="provider-tags">
+                <StorytelTag
                 class:list={['storytel-tag', st.available ? 'is-available' : 'is-missing']}
                 href={st.available && st.url ? st.url : undefined}
                 target={st.available && st.url ? '_blank' : undefined}
@@ -85,6 +102,195 @@ const StorytelTag = st.available && st.url ? 'a' : 'span';
                   {st.available ? 'dostępna na Storytel' : 'niedostępna na Storytel'}
                 </span>
               </StorytelTag>
+              
+              {/* BookBeat Icon */}
+              <a
+                class:list={['storytel-tag', nextMeeting.bookbeat.available ? 'is-available' : 'is-missing']}
+                href={nextMeeting.bookbeat.available && nextMeeting.bookbeat.url ? nextMeeting.bookbeat.url : undefined}
+                target={nextMeeting.bookbeat.available && nextMeeting.bookbeat.url ? '_blank' : undefined}
+                rel={nextMeeting.bookbeat.available && nextMeeting.bookbeat.url ? 'noopener' : undefined}
+              >
+                <svg class="storytel-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M4.5 14v-2a7.5 7.5 0 0 1 15 0v2"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                  />
+                  <rect x="1.5" y="13" width="6" height="8.5" rx="3" fill="currentColor" />
+                  <rect x="16.5" y="13" width="6" height="8.5" rx="3" fill="currentColor" />
+                </svg>
+                BookBeat
+                <svg class="storytel-status" viewBox="0 0 24 24" aria-hidden="true">
+                  {
+                    nextMeeting.bookbeat.available ? (
+                      <path
+                        d="M4.5 12.5 10 18 19.5 6.5"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="3.2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    ) : (
+                      <path
+                        d="M6 6l12 12M18 6 6 18"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="3.2"
+                        stroke-linecap="round"
+                      />
+                    )
+                  }
+                </svg>
+                <span class="visually-hidden">
+                  {nextMeeting.bookbeat.available ? 'dostępna na BookBeat' : 'niedostępna na BookBeat'}
+                </span>
+              </a>
+              
+              {/* Audioteka Icon */}
+              <a
+                class:list={['storytel-tag', nextMeeting.audioteka.available ? 'is-available' : 'is-missing']}
+                href={nextMeeting.audioteka.available && nextMeeting.audioteka.url ? nextMeeting.audioteka.url : undefined}
+                target={nextMeeting.audioteka.available && nextMeeting.audioteka.url ? '_blank' : undefined}
+                rel={nextMeeting.audioteka.available && nextMeeting.audioteka.url ? 'noopener' : undefined}
+              >
+                <svg class="storytel-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M4.5 14v-2a7.5 7.5 0 0 1 15 0v2"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                  />
+                  <rect x="1.5" y="13" width="6" height="8.5" rx="3" fill="currentColor" />
+                  <rect x="16.5" y="13" width="6" height="8.5" rx="3" fill="currentColor" />
+                </svg>
+                Audioteka
+                <svg class="storytel-status" viewBox="0 0 24 24" aria-hidden="true">
+                  {
+                    nextMeeting.audioteka.available ? (
+                      <path
+                        d="M4.5 12.5 10 18 19.5 6.5"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="3.2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    ) : (
+                      <path
+                        d="M6 6l12 12M18 6 6 18"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="3.2"
+                        stroke-linecap="round"
+                      />
+                    )
+                  }
+                </svg>
+                <span class="visually-hidden">
+                  {nextMeeting.audioteka.available ? 'dostępna na Audioteka' : 'niedostępna na Audioteka'}
+                </span>
+              </a>
+              
+              {/* Legimi Icon */}
+              <a
+                class:list={['storytel-tag', nextMeeting.legimi.available ? 'is-available' : 'is-missing']}
+                href={nextMeeting.legimi.available && nextMeeting.legimi.url ? nextMeeting.legimi.url : undefined}
+                target={nextMeeting.legimi.available && nextMeeting.legimi.url ? '_blank' : undefined}
+                rel={nextMeeting.legimi.available && nextMeeting.legimi.url ? 'noopener' : undefined}
+              >
+                <svg class="storytel-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M4.5 14v-2a7.5 7.5 0 0 1 15 0v2"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                  />
+                  <rect x="1.5" y="13" width="6" height="8.5" rx="3" fill="currentColor" />
+                  <rect x="16.5" y="13" width="6" height="8.5" rx="3" fill="currentColor" />
+                </svg>
+                Legimi
+                <svg class="storytel-status" viewBox="0 0 24 24" aria-hidden="true">
+                  {
+                    nextMeeting.legimi.available ? (
+                      <path
+                        d="M4.5 12.5 10 18 19.5 6.5"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="3.2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    ) : (
+                      <path
+                        d="M6 6l12 12M18 6 6 18"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="3.2"
+                        stroke-linecap="round"
+                      />
+                    )
+                  }
+                </svg>
+                 <span class="visually-hidden">
+                   {nextMeeting.legimi.available ? 'dostępna na Legimi' : 'niedostępna na Legimi'}
+                 </span>
+               </a>
+               
+               {/* Biblioteka Raczyńskich Icon */}
+               <a
+                 class:list={['provider-tag', nextMeeting.biblioteka_raczynskich.available ? 'is-available' : 'is-missing']}
+                 href={nextMeeting.biblioteka_raczynskich.available && nextMeeting.biblioteka_raczynskich.url ? nextMeeting.biblioteka_raczynskich.url : undefined}
+                 target={nextMeeting.biblioteka_raczynskich.available && nextMeeting.biblioteka_raczynskich.url ? '_blank' : undefined}
+                 rel={nextMeeting.biblioteka_raczynskich.available && nextMeeting.biblioteka_raczynskich.url ? 'noopener' : undefined}
+               >
+                 <svg class="provider-icon" viewBox="0 0 24 24" aria-hidden="true">
+                   <path
+                     d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5z"
+                     fill="none"
+                     stroke="currentColor"
+                     stroke-width="2"
+                   />
+                   <path
+                     d="M9 10h6M9 14h6"
+                     fill="none"
+                     stroke="currentColor"
+                     stroke-width="2"
+                     stroke-linecap="round"
+                   />
+                 </svg>
+                 B. Raczyńskich
+                 <svg class="provider-status" viewBox="0 0 24 24" aria-hidden="true">
+                   {
+                     nextMeeting.biblioteka_raczynskich.available ? (
+                       <path
+                         d="M4.5 12.5 10 18 19.5 6.5"
+                         fill="none"
+                         stroke="currentColor"
+                         stroke-width="3.2"
+                         stroke-linecap="round"
+                         stroke-linejoin="round"
+                       />
+                     ) : (
+                       <path
+                         d="M6 6l12 12M18 6 6 18"
+                         fill="none"
+                         stroke="currentColor"
+                         stroke-width="3.2"
+                         stroke-linecap="round"
+                       />
+                     )
+                   }
+                 </svg>
+                 <span class="visually-hidden">
+                   {nextMeeting.biblioteka_raczynskich.available ? 'dostępna w Bibliotece Raczyńskich' : 'niedostępna w Bibliotece Raczyńskich'}
+                 </span>
+               </a>
+              </div>
             </span>
             <span class="next-meeting-date">
               <span class="next-meeting-date-day">{nextMeeting.date}</span>
@@ -257,6 +463,60 @@ const StorytelTag = st.available && st.url ? 'a' : 'span';
   }
 
   .storytel-tag.is-missing .storytel-status {
+    color: hsl(8 46% 42%);
+  }
+
+  /* Provider tags wrapper */
+  .provider-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin-top: 0.35rem;
+  }
+
+  /* Generic provider tags */
+  .provider-tag {
+    align-self: flex-start;
+    margin-top: 0.35rem;
+    margin-left: 0.3rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.72rem;
+    color: var(--muted);
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 0.15rem 0.55rem;
+    white-space: nowrap;
+    transition:
+      color 0.15s ease,
+      border-color 0.15s ease;
+  }
+
+  a.provider-tag:hover {
+    color: var(--ink);
+    border-color: var(--line-strong);
+  }
+
+  .provider-icon {
+    width: 1em;
+    height: 1em;
+    flex: none;
+  }
+
+  .provider-status {
+    width: 0.85em;
+    height: 0.85em;
+    flex: none;
+    margin-left: 0.05rem;
+  }
+
+  .provider-tag.is-available .provider-status {
+    color: hsl(140 46% 30%);
+  }
+
+  .provider-tag.is-missing .provider-status {
     color: hsl(8 46% 42%);
   }
 
