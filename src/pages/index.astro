@@ -38,7 +38,7 @@ const st = nextMeeting.storytel;
 const StorytelTag = st.available && st.url ? 'a' : 'span';
 const BookBeatTag = nextMeeting.bookbeat.available && nextMeeting.bookbeat.url ? 'a' : 'span';
 const AudiotekaTag = nextMeeting.audioteka.available && nextMeeting.audioteka.url ? 'a' : 'span';
-const LemimiTag = nextMeeting.legimi.available && nextMeeting.legimi.url ? 'a' : 'span';
+const LegimiTag = nextMeeting.legimi.available && nextMeeting.legimi.url ? 'a' : 'span';
 ---
 
 <Base title="Klub Książki — Ranking">
@@ -199,7 +199,7 @@ const LemimiTag = nextMeeting.legimi.available && nextMeeting.legimi.url ? 'a' :
               </AudiotekaTag>
 
               {/* Legimi Icon */}
-              <LemimiTag
+              <LegimiTag
                 class:list={['storytel-tag', nextMeeting.legimi.available ? 'is-available' : 'is-missing']}
                 href={nextMeeting.legimi.available && nextMeeting.legimi.url ? nextMeeting.legimi.url : undefined}
                 target={nextMeeting.legimi.available && nextMeeting.legimi.url ? '_blank' : undefined}
@@ -242,7 +242,7 @@ const LemimiTag = nextMeeting.legimi.available && nextMeeting.legimi.url ? 'a' :
                  <span class="visually-hidden">
                    {nextMeeting.legimi.available ? 'dostępna na Legimi' : 'niedostępna na Legimi'}
                  </span>
-               </LemimiTag>
+               </LegimiTag>
                
                {/* Biblioteka Raczyńskich Icon */}
                <a
