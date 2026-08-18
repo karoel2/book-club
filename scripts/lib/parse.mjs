@@ -117,6 +117,21 @@ export function parseBlocks(text, roster = null) {
   return blocks;
 }
 
+// A personal name is one to three capitalised tokens and nothing else ("Lisa
+// Ridzen", "Kanae Minato"). Two-token minimum: a lone capitalised word is just
+// as likely to be a title ("Achaja", "Wyznania").
+function looksLikePerson(s) {
+  const tokens = s.split(/\s+/).filter(Boolean);
+  if (tokens.length < 2 || tokens.length > 3) return false;
+  return tokens.every((t) => /^\p{Lu}/u.test(t));
+}
+
+// A Polish title nearly always carries a lowercase word — a verb, preposition or
+// adjective ("Kiedy żurawie odlatują na południe"). Personal names never do.
+function hasLowercaseWord(s) {
+  return s.split(/\s+/).filter(Boolean).some((t) => /^\p{Ll}/u.test(t));
+}
+
 /**
  * Every plausible reading of a header, best guess first. Only consulted when the
  * comma split is a coin toss: the caller confirms one against a book database
@@ -195,6 +210,18 @@ export function splitTitleAuthor(header) {
   const rightAuthor = AUTHOR_INITIAL.test(right);
   if (rightAuthor && !leftAuthor) return { title: left, author: right, warnings: [], ambiguous: false, candidates };
   if (leftAuthor && !rightAuthor) return { title: right, author: left, warnings: [], ambiguous: false, candidates };
+
+  // No initial anywhere. Shape still decides it when one side is a bare personal
+  // name and the other unmistakably prose — and unlike the database lookup this
+  // costs nothing and can't be rate-limited. Both conditions are required: with
+  // "Zielona Mila, King" neither side has a lowercase word, so we stay unsure.
+  if (looksLikePerson(right) && hasLowercaseWord(left)) {
+    return { title: left, author: right, warnings: [], ambiguous: false, candidates };
+  }
+  if (looksLikePerson(left) && hasLowercaseWord(right)) {
+    return { title: right, author: left, warnings: [], ambiguous: false, candidates };
+  }
+
   return {
     title: text,
     author: null,

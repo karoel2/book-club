@@ -28,12 +28,30 @@ test('a comma inside the title keeps the author, because every comma is tried', 
   assert.equal(r.ambiguous, false);
 });
 
-test('no initial anywhere is ambiguous, and offers both readings', () => {
+test('a bare personal name against prose decides it with no lookup', () => {
   const r = splitTitleAuthor(['Kiedy żurawie odlatują na południe, Lisa Ridzen']);
-  assert.equal(r.ambiguous, true);
-  const c = cand(['Kiedy żurawie odlatują na południe, Lisa Ridzen']);
-  assert.equal(c[0], 'Kiedy żurawie odlatują na południe|Lisa Ridzen');
-  assert.ok(c.includes('Lisa Ridzen|Kiedy żurawie odlatują na południe'));
+  assert.equal(r.title, 'Kiedy żurawie odlatują na południe');
+  assert.equal(r.author, 'Lisa Ridzen');
+  assert.equal(r.ambiguous, false, 'must not need the rate-limited database');
+});
+
+test('…and in the other order too', () => {
+  const r = splitTitleAuthor(['Lisa Ridzen, Kiedy żurawie odlatują na południe']);
+  assert.equal(r.title, 'Kiedy żurawie odlatują na południe');
+  assert.equal(r.author, 'Lisa Ridzen');
+});
+
+test('two capitalised sides stay ambiguous rather than guess', () => {
+  // "Zielona Mila" is as name-shaped as "King" is; guessing would publish a
+  // wrong title, so this must fall through to the database.
+  assert.equal(splitTitleAuthor(['Zielona Mila, King']).ambiguous, true);
+  assert.equal(splitTitleAuthor(['Wyznania, Kanae Minato']).ambiguous, true);
+});
+
+test('ambiguous headers still offer both readings', () => {
+  const c = cand(['Wyznania, Kanae Minato']);
+  assert.equal(c[0], 'Wyznania|Kanae Minato');
+  assert.ok(c.includes('Kanae Minato|Wyznania'));
 });
 
 test('the whole header as a title is always the last resort', () => {
