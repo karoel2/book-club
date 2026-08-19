@@ -23,3 +23,10 @@ azure/deployment.local.sh
 *.log
 .env
 .env.production
+
+# python
+__pycache__/
+*.pyc
+
+# scratch api dumps
+response.json
