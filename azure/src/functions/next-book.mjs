@@ -117,7 +117,7 @@ app.http('next-book', {
 
     let previous;
     try {
-      previous = await loadJson(DATA_PATH, {});
+      previous = (await loadJson(DATA_PATH, {})) || {};
     } catch (e) {
       context.error(`GitHub read failed: ${e.message}`);
       return { status: 502, jsonBody: { error: 'github_read_failed', detail: e.message } };
