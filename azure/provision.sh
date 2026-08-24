@@ -95,7 +95,7 @@ npm run sync
 # --javascript: local.settings.json is git-ignored, so func can't infer the runtime
 func azure functionapp publish "$FN" --build remote --javascript
 
-say "Relaxing the mail trigger (drops subjectFilter, allows inline images)"
+say "Converging the workflow (mail-trigger filters + the next-book branch)"
 LA_API="https://management.azure.com/subscriptions/$SUB/resourceGroups/$RG/providers/Microsoft.Logic/workflows/$LA"
 if [ -z "$LA" ]; then
   echo "  LA not set — skipping"
@@ -126,4 +126,8 @@ cat <<EOF
   Dry run:   FUNC_URL="https://$FN.azurewebsites.net/api/ingest?code=<key>" \\
              SECRET="<INGEST_SECRET>" FROM="$ALLOWED_SENDERS" DRY=1 \\
              ./scripts/test-ingest.sh ../data/<screenshot>.jpeg
+
+  Next book: FUNC_URL="https://$FN.azurewebsites.net/api/next-book?code=<key>" \\
+             SECRET="<INGEST_SECRET>" FROM="$ALLOWED_SENDERS" DRY=1 \\
+             ./scripts/test-next-book.sh "Problem trzech ciał, Cixin Liu"
 EOF

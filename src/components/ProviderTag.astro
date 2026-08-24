@@ -1,0 +1,110 @@
+---
+import type { ProviderStatus } from '../data/next-meeting';
+
+interface Props {
+  provider: ProviderStatus;
+}
+
+const { provider } = Astro.props;
+const { label, available, url, icon, description } = provider;
+
+// A confirmed "yes" links to the edition; an unchecked one links to the search,
+// so "?" is something you can act on. A confirmed "no" has nowhere useful to go.
+const linked = available !== false && !!url;
+const Tag = linked ? 'a' : 'span';
+const state = available === true ? 'is-available' : available === false ? 'is-missing' : 'is-unknown';
+---
+
+<Tag
+  class:list={['provider-tag', state]}
+  href={linked ? url : undefined}
+  target={linked ? '_blank' : undefined}
+  rel={linked ? 'noopener' : undefined}
+>
+  {
+    icon === 'book' ? (
+      <svg class="provider-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5z" fill="none" stroke="currentColor" stroke-width="2" />
+        <path d="M9 10h6M9 14h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+      </svg>
+    ) : (
+      <svg class="provider-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4.5 14v-2a7.5 7.5 0 0 1 15 0v2" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" />
+        <rect x="1.5" y="13" width="6" height="8.5" rx="3" fill="currentColor" />
+        <rect x="16.5" y="13" width="6" height="8.5" rx="3" fill="currentColor" />
+      </svg>
+    )
+  }
+  {label}
+  <svg class="provider-status" viewBox="0 0 24 24" aria-hidden="true">
+    {
+      available === true ? (
+        <path d="M4.5 12.5 10 18 19.5 6.5" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" />
+      ) : available === false ? (
+        <path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" />
+      ) : (
+        <path
+          d="M8.5 8.5a3.5 3.5 0 1 1 3.5 3.5V14"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="3"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      )
+    }
+    {available === null && <circle cx="12" cy="18.5" r="1.6" fill="currentColor" />}
+  </svg>
+  <span class="visually-hidden">{description}</span>
+</Tag>
+
+<style>
+  .provider-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.72rem;
+    color: var(--muted);
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 0.15rem 0.55rem;
+    white-space: nowrap;
+    transition:
+      color 0.15s ease,
+      border-color 0.15s ease;
+  }
+
+  a.provider-tag:hover {
+    color: var(--ink);
+    border-color: var(--line-strong);
+  }
+
+  .provider-icon {
+    width: 1em;
+    height: 1em;
+    flex: none;
+  }
+
+  /* Status glyph borrows the ends of the rating scale: green = yes, red = no,
+     and a muted "?" for a service we couldn't ask. */
+  .provider-status {
+    width: 0.85em;
+    height: 0.85em;
+    flex: none;
+    margin-left: 0.05rem;
+  }
+
+  .is-available .provider-status {
+    color: hsl(140 46% 30%);
+  }
+
+  .is-missing .provider-status {
+    color: hsl(8 46% 42%);
+  }
+
+  .is-unknown .provider-status {
+    color: var(--muted);
+    opacity: 0.7;
+  }
+</style>

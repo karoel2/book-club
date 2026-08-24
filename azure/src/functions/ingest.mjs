@@ -12,13 +12,7 @@ import { parseBlocks, finalizeBook, buildRoster, slugify, serializeBooks, applyH
 import { fetchMetadata, pickBestCover, resolveHeader } from '../shared/metadata.mjs';
 import { ocrImage } from '../ocr.mjs';
 import { loadBooksJson, commitChanges } from '../github.mjs';
-
-// Outlook/Gmail send "from" as a plain address or an object — normalise it.
-function extractFrom(from) {
-  if (!from) return '';
-  if (typeof from === 'string') return from;
-  return from.emailAddress?.address || from.address || from.email || JSON.stringify(from);
-}
+import { extractFrom, allowedSender, unauthorized } from '../mail.mjs';
 
 // A human-readable outcome for the confirmation email. Built here rather than in
 // Logic App expressions, which have no good way to format a list of notes.
@@ -33,25 +27,12 @@ function buildSummary({ added, review, skipped, commit, filename }) {
   return lines.join('\n');
 }
 
-function allowedSender(from) {
-  const allow = (process.env.ALLOWED_SENDERS || '')
-    .toLowerCase()
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-  if (!allow.length) return true; // no allowlist configured
-  const addr = String(from || '').toLowerCase();
-  return allow.some((a) => addr.includes(a));
-}
-
 app.http('ingest', {
   methods: ['POST'],
   authLevel: 'function',
   handler: async (request, context) => {
-    const secret = process.env.INGEST_SECRET;
-    if (secret && request.headers.get('x-ingest-secret') !== secret) {
-      return { status: 401, jsonBody: { error: 'unauthorized' } };
-    }
+    const denied = unauthorized(request);
+    if (denied) return denied;
 
     const body = await request.json().catch(() => ({}));
     const dryRun = body.dryRun === true || request.query.get('dry') === '1';
