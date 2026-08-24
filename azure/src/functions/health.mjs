@@ -23,7 +23,7 @@ app.http('health', {
       try {
         books = (await loadBooksJson()).length;
         // Null here just means no next-meeting mail has landed yet.
-        nextBook = (await loadJson('src/data/next-meeting.json', {})).title ?? null;
+        nextBook = (await loadJson('src/data/next-meeting.json', {}))?.title ?? null;
         github = 'ok';
       } catch (e) {
         github = `error: ${e.message}`;

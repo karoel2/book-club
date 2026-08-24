@@ -53,7 +53,7 @@ const hasCover = (slug) => COVER_EXT.some((e) => existsSync(join(COVERS, `${slug
 function loadPrevious() {
   if (!existsSync(DATA)) return {};
   try {
-    return JSON.parse(readFileSync(DATA, 'utf8'));
+    return JSON.parse(readFileSync(DATA, 'utf8')) || {};
   } catch (e) {
     log(`✗ ${basename(DATA)} nie jest poprawnym JSON-em: ${e.message}`);
     process.exit(1);
