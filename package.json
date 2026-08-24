@@ -10,6 +10,7 @@
     "preview": "astro preview",
     "astro": "astro",
     "ingest": "node scripts/ingest.mjs",
+    "next": "node scripts/next-book.mjs",
     "test": "node --test scripts/**/*.test.mjs"
   },
   "dependencies": {

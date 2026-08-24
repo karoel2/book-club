@@ -5,16 +5,23 @@ no Mac, no cron. A Logic App watches an **Outlook** inbox and POSTs each attachm
 to an Azure Function that OCRs it, parses the scores, enriches metadata, and commits
 to GitHub — which triggers the existing Pages build.
 
+The same mailbox also sets the **next-meeting card**: a mail with no attachment whose
+first line reads `Tytuł, Autor` points the card at that book.
+
 ```
-Outlook (screenshot) → Logic App (new-mail trigger)
-  → Function: Azure Vision OCR → parse → enrich (Google Books/OL)
-  → single GitHub commit (books.json + cover) → Pages rebuilds
-  ↑ sender allowlist enforced by the function, not the Logic App
+Outlook → Logic App (new-mail trigger)
+  ├─ has attachments? → ingest:    Azure Vision OCR → parse → enrich (Google Books/OL)
+  │                                → books.json + cover
+  └─ always          → next-book:  parse "Tytuł, Autor" → confirm → check 5 services
+                                   → next-meeting.json + cover   (ignores mail with attachments)
+  → one GitHub commit each → Pages rebuilds → one confirmation mail for both
+  ↑ sender allowlist enforced by the functions, not the Logic App
 ```
 
 The only difference from the local CLI is the OCR engine: macOS Vision (`ocr.swift`)
-→ **Azure AI Vision Read**. Parsing (`scripts/lib/parse.mjs`) and enrichment
-(`scripts/metadata.mjs`) are shared verbatim (copied in by `npm run sync`).
+→ **Azure AI Vision Read**. Parsing (`scripts/lib/parse.mjs`,
+`scripts/lib/next-meeting.mjs`), availability (`scripts/lib/availability.mjs`) and
+enrichment (`scripts/metadata.mjs`) are shared verbatim (copied in by `npm run sync`).
 
 ## Cost
 Effectively **$0**: Functions Consumption free grant, Azure AI Vision **F0** (~5k
@@ -88,8 +95,9 @@ az functionapp keys list -n "$FN" -g "$RG" --query functionKeys.default -o tsv
 
 The deployed workflow polls the Inbox roughly every 3 minutes and, for each
 attachment, calls the `ingest` function directly (a `Function`-type action, so no
-URL or `?code=` to keep in sync). `provision.sh` keeps two settings correct, and
-both matter more than they look:
+URL or `?code=` to keep in sync). It then calls `next-book` once with the mail
+**body**. `provision.sh` keeps two settings correct, and both matter more than they
+look:
 
 - **no `subjectFilter`** — a subject filter silently skips every mail that doesn't
   match, and shows up only as `Fired: False` in Trigger History.
@@ -98,6 +106,20 @@ both matter more than they look:
 
 If the OAuth consent ever expires, `./authorize-outlook.sh` walks the connection
 through re-consent (that sign-in is the one step that genuinely cannot be scripted).
+
+### The next-book branch
+
+`Call_next_book` runs **after** `For_each_attachment`, not beside it — both append to
+the one `summary` variable, and parallel branches would race it for exactly the reason
+the foreach is sequential. `provision.sh` grafts it onto a workflow that predates it
+(`scripts/patch-logicapp.mjs` derives the function id from the ingest call and rewires
+`Send_summary`), so upgrading is one `./provision.sh`, not a rebuild.
+
+The function ignores any mail with an attachment, so a caption under a screenshot can
+never re-point the card, and it returns an **empty summary** for mail that isn't a book
+line — which is most mail. That is why `Append_next_book` appends nothing at all rather
+than a blank paragraph: otherwise every unrelated message would arrive with a stray gap
+in the confirmation.
 
 ### Confirmation email
 
@@ -126,13 +148,17 @@ sane way to format a list of notes. Three things about the workflow side:
 - `For_each_attachment` is **sequential** (`concurrency.repetitions: 1`), because
   parallel branches appending to one variable would race and lose lines.
 
-Three reference definitions live here. Only the first reflects what is deployed:
+Reference definitions live here:
 
 | File | What it is |
 |---|---|
-| *(live in Azure)* | Outlook.com connector, trigger V2, `ContentBytes`/`Name` |
+| `logicapp.template.json` | the deployed shape as an ARM template — Outlook.com connector, trigger V2, `ContentBytes`/`Name`, both jobs |
 | `logicapp.outlook.workflow.json` | Office 365 variant, trigger V3, `contentBytes`/`name` — for a work/school mailbox |
 | `logicapp.workflow.json` | the original Gmail variant, kept for reference only |
+
+Deploying the template needs `nextBookFunctionId` alongside `functionId` (both are
+`<function-app-resource-id>/functions/<name>`). Converging the *existing* workflow
+needs neither — `./provision.sh` derives the second from the first.
 
 ## Sending mail / testing end-to-end
 
@@ -152,6 +178,10 @@ the site. The rules for a mail that actually gets processed:
   was created.
 
 Re-sending the same screenshot is a no-op — existing books come back under `skipped`.
+
+For the next-meeting card, send **no attachment** and put the book on the first line
+(`Problem trzech ciał, Cixin Liu`, optionally `…, 25/08/26 18:00`). Quoted replies and
+signatures are stripped, so only what you typed at the top counts.
 
 ## Local development
 ```bash
@@ -214,7 +244,8 @@ source deployment.local.sh
 curl "$FN_HOST/api/health?code=<function-key>"
 ```
 Expect `visionConfigured`, `githubConfigured`, `ingestSecretSet` = `true`, `allowlistCount` ≥ 1,
-and `github: "ok"` with a `books` count. Anything `false`/`error` is a missing/wrong app
+and `github: "ok"` with a `books` count (plus `nextBook`, the title on the card — `null`
+until the first next-book mail lands). Anything `false`/`error` is a missing/wrong app
 setting or a bad `GITHUB_TOKEN`/`GITHUB_REPO` — fix that before anything else.
 
 ### 2. Does the function work end-to-end? (bypass email)
@@ -222,6 +253,11 @@ setting or a bad `GITHUB_TOKEN`/`GITHUB_REPO` — fix that before anything else.
 FUNC_URL="$FN_HOST/api/ingest?code=<key>" \
 SECRET="<INGEST_SECRET>" FROM="$ALLOWED_SENDERS" DRY=1 \
 ./scripts/test-ingest.sh ../data/received_995736336268004.jpeg
+
+# and the next-meeting card:
+FUNC_URL="$FN_HOST/api/next-book?code=<key>" \
+SECRET="<INGEST_SECRET>" FROM="$ALLOWED_SENDERS" DRY=1 \
+./scripts/test-next-book.sh "Problem trzech ciał, Cixin Liu"
 ```
 `DRY=1` returns the OCR text + parsed books and **commits nothing**. If you get back
 sensible `parsed` entries, then **OCR + parse + GitHub-read all work, and the problem is the
@@ -238,6 +274,9 @@ to test a real commit.
 | `502 github_*` | token scope/repo/branch problem |
 | `200 { added:[], skipped:[...] }` | working — those books already exist (re-sending the same shot is a no-op) |
 | `200 { added:[], review:[...] }` | parsed but low-confidence (bad average / unknown member); not published on purpose |
+| `200 { ignored:true }` (next-book) | the mail had an attachment, or its first line isn't a book line — normal for most mail |
+| `200 { refused:true }` (next-book) | a one-sided line no book database knows; send it as `Tytuł, Autor` |
+| `200 { unchanged:true }` (next-book) | that book is already on the card (the trigger can deliver a mail twice) |
 
 Live logs: Function App → **Log stream** (or Application Insights). Every call logs
 `ocrChars`, `blocks`, and `added/review/skipped`.

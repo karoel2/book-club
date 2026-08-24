@@ -12,6 +12,8 @@ mkdirSync(shared, { recursive: true });
 
 const files = [
   [join(repo, 'scripts', 'lib', 'parse.mjs'), join(shared, 'parse.mjs')],
+  [join(repo, 'scripts', 'lib', 'availability.mjs'), join(shared, 'availability.mjs')],
+  [join(repo, 'scripts', 'lib', 'next-meeting.mjs'), join(shared, 'next-meeting.mjs')],
   [join(repo, 'scripts', 'metadata.mjs'), join(shared, 'metadata.mjs')],
 ];
 for (const [src, dst] of files) copyFileSync(src, dst);

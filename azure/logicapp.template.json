@@ -2,7 +2,7 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "metadata": {
-    "comment": "Consumption Logic App: poll an Outlook.com inbox, POST each attachment to the ingest function. Deliberately a POLLING ApiConnection trigger, not ApiConnectionNotification \u2014 the push/webhook variant depends on Outlook.com delivering a MailSubscriptionPoke to a callback URL, which silently never arrived. No subjectFilter and fetchOnlyWithAttachment=false, because a subject filter skips every other mail and phones often inline the screenshot. Attachment fields are PascalCase (ContentBytes/Name) on the Outlook.com connector; Office 365 would be camelCase. Send_summary uses POST /v2/Mail rather than a reply: every Reply path (/Mail/{id}/Reply, /v2/\u2026, /v3/\u2026) returns NotFound on the Outlook.com connector. It runs after Failed too, since a failed ingest is exactly when you want telling. For_each_attachment is sequential because parallel branches appending to one variable would race. splitOn is REQUIRED: /v2/Mail/OnNewEmail returns {value:[\u2026]}, and without it every triggerBody()?['Attachments'] / ?['From'] is null. Empty-array fallback is json('[]'), not createArray(), which errors when called with no arguments."
+    "comment": "Consumption Logic App: poll an Outlook.com inbox, POST each attachment to the ingest function. Deliberately a POLLING ApiConnection trigger, not ApiConnectionNotification — the push/webhook variant depends on Outlook.com delivering a MailSubscriptionPoke to a callback URL, which silently never arrived. No subjectFilter and fetchOnlyWithAttachment=false, because a subject filter skips every other mail and phones often inline the screenshot. Attachment fields are PascalCase (ContentBytes/Name) on the Outlook.com connector; Office 365 would be camelCase. Send_summary uses POST /v2/Mail rather than a reply: every Reply path (/Mail/{id}/Reply, /v2/…, /v3/…) returns NotFound on the Outlook.com connector. It runs after Failed too, since a failed ingest is exactly when you want telling. For_each_attachment is sequential because parallel branches appending to one variable would race. splitOn is REQUIRED: /v2/Mail/OnNewEmail returns {value:[…]}, and without it every triggerBody()?['Attachments'] / ?['From'] is null. Empty-array fallback is json('[]'), not createArray(), which errors when called with no arguments. Two jobs run in sequence, not in parallel: For_each_attachment (screenshots → ingest), then Call_next_book (the mail body → next-book). Sequential for the same reason the foreach is — both append to the one `summary` variable, and parallel branches would race it. next-book ignores any mail that carries an attachment, so one mail never does both jobs."
   },
   "parameters": {
     "logicAppName": {
@@ -15,6 +15,12 @@
       "type": "string",
       "metadata": {
         "description": "Resource id of the ingest function"
+      }
+    },
+    "nextBookFunctionId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource id of the next-book function"
       }
     },
     "ingestSecret": {
@@ -141,10 +147,47 @@
                 }
               }
             },
+            "Call_next_book": {
+              "type": "Function",
+              "runAfter": {
+                "For_each_attachment": [
+                  "Succeeded",
+                  "Failed"
+                ]
+              },
+              "inputs": {
+                "function": {
+                  "id": "[parameters('nextBookFunctionId')]"
+                },
+                "method": "POST",
+                "headers": {
+                  "x-ingest-secret": "[parameters('ingestSecret')]"
+                },
+                "body": {
+                  "body": "@coalesce(triggerBody()?['Body'], triggerBody()?['BodyPreview'], '')",
+                  "subject": "@triggerBody()?['Subject']",
+                  "from": "@triggerBody()?['From']",
+                  "hasAttachments": "@greater(length(coalesce(triggerBody()?['Attachments'], json('[]'))), 0)"
+                }
+              }
+            },
+            "Append_next_book": {
+              "type": "AppendToStringVariable",
+              "runAfter": {
+                "Call_next_book": [
+                  "Succeeded",
+                  "Failed"
+                ]
+              },
+              "inputs": {
+                "name": "summary",
+                "value": "@{if(empty(coalesce(body('Call_next_book')?['summaryHtml'], '')), '', concat(body('Call_next_book')?['summaryHtml'], '<br><br>'))}"
+              }
+            },
             "Send_summary": {
               "type": "ApiConnection",
               "runAfter": {
-                "For_each_attachment": [
+                "Append_next_book": [
                   "Succeeded",
                   "Failed"
                 ]
@@ -159,8 +202,8 @@
                 "path": "/v2/Mail",
                 "body": {
                   "To": "@triggerBody()?['From']",
-                  "Subject": "@{if(empty(trim(coalesce(triggerBody()?['Subject'], ''))), 'Klub Ksi\u0105\u017cki \u2014 zrzut', concat('Re: ', triggerBody()?['Subject']))}",
-                  "Body": "@{if(empty(variables('summary')), 'Nie uda\u0142o si\u0119 przetworzy\u0107 tego zrzutu \u2014 sprawd\u017a histori\u0119 uruchomie\u0144 Logic App.', variables('summary'))}",
+                  "Subject": "@{if(empty(trim(coalesce(triggerBody()?['Subject'], ''))), 'Klub Książki — zrzut', concat('Re: ', triggerBody()?['Subject']))}",
+                  "Body": "@{if(empty(variables('summary')), 'Nie rozpoznałem niczego w tej wiadomości — załącz zrzut z ocenami albo napisz „Tytuł, Autor”.', variables('summary'))}",
                   "Importance": "Normal"
                 }
               }
