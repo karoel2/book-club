@@ -2,7 +2,8 @@
 import Base from '../layouts/Base.astro';
 import BookRow from '../components/BookRow.astro';
 import BookCover from '../components/BookCover.astro';
-import { getBooks, getLeaderboard, getCategoryLeaders, type LeaderboardCategory } from '../data/books';
+import { getBooks, getLeaderboard, type LeaderboardCategory } from '../data/books';
+import { url } from '../lib/url';
 
 const books = getBooks();
 const count = books.length;
@@ -17,8 +18,7 @@ const categories: { key: LeaderboardCategory; label: string; unit?: string }[] =
 
 const leaderboards = categories.map(category => ({
   ...category,
-  entries: getLeaderboard(category.key),
-  leaders: getCategoryLeaders(category.key)
+  entries: getLeaderboard(category.key)
 }));
 
 // Check if we have any valid user grades for statistics
@@ -344,7 +344,7 @@ const LegimiTag = nextMeeting.legimi.available && nextMeeting.legimi.url ? 'a' :
                     !entry.isLeader && entry.rank === 2 && 'is-silver',
                     !entry.isLeader && entry.rank === 3 && 'is-bronze',
                   ]}>
-                    <a class="stat-link" href={`/members/${entry.user.slug}`} aria-label={`${entry.user.name}, ${entry.rank}. miejsce, ${category.key === 'activity' ? entry.user.ratedCount : category.key === 'streak' ? entry.user.longestStreak : entry.user.averageLabel}${entry.isLeader ? ', lider rankingu' : ''}`}>
+                    <a class="stat-link" href={url(`/members/${entry.user.slug}`)} aria-label={`${entry.user.name}, ${entry.rank}. miejsce, ${category.key === 'activity' ? entry.user.ratedCount : category.key === 'streak' ? entry.user.longestStreak : entry.user.averageLabel}${entry.isLeader ? ', lider rankingu' : ''}`}>
                       <span class="stat-rank" aria-hidden="true">{entry.rank}.</span>
                       <span class="stat-name">{entry.user.name}</span>
                       {entry.isLeader && <span class="leader-badge" aria-label="Lider">👑</span>}

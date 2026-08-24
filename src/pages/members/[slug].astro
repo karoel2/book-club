@@ -1,7 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import BookRow from '../../components/BookRow.astro';
-import { getMembers, getMemberBySlug, getMemberRatings, getUserStatistics, getLeaderboard, booksLabel } from '../../data/books';
+import { getMembers, getMemberBySlug, getMemberRatingsChronological, getUserStatistics, getAllUserStatistics, getLeaderboard, booksLabel } from '../../data/books';
 import { url } from '../../lib/url';
 
 export function getStaticPaths() {
@@ -11,19 +11,21 @@ export function getStaticPaths() {
 const { slug } = Astro.params;
 const member = getMemberBySlug(slug!);
 if (!member) {
-  return new Response(null, {
-    status: 404,
-    statusText: 'Not Found',
-    headers: {
-      'Location': '/404'
-    }
-  });
+  return Astro.redirect(url('/404'), 302);
 }
 
 const stats = getUserStatistics(member.name);
-const ratings = getMemberRatings(member.name);
+const ratings = getMemberRatingsChronological(member.name);
 const rankFor = (category: 'highest-average' | 'lowest-average' | 'streak' | 'activity') =>
   getLeaderboard(category).find((entry) => entry.user.name === member.name)?.rank;
+const rankForScore = (score: number | null, direction: 'high' | 'low') => {
+  if (score === null) return undefined;
+  const values = getAllUserStatistics()
+    .map((user) => direction === 'high' ? user.highestScore : user.lowestScore)
+    .filter((value): value is number => value !== null)
+    .sort((a, b) => direction === 'high' ? b - a : a - b);
+  return values.findIndex((value) => value === score) + 1;
+};
 const medalClass = (rank: number | undefined) =>
   rank === 1 ? 'is-gold' : rank === 2 ? 'is-silver' : rank === 3 ? 'is-bronze' : '';
 const medalEmoji = (rank: number | undefined) =>
@@ -57,15 +59,15 @@ const medalEmoji = (rank: number | undefined) =>
           <strong class="member-stat-value">{stats.averageLabel}</strong>
           {!stats.averageEligible && <span class="member-stat-note">poniżej 3 ocen</span>}
         </div>
-        <div class:list={['member-stat-card', medalClass(rankFor('highest-average'))]}>
+        <div class:list={['member-stat-card', medalClass(rankForScore(stats.highestScore, 'high'))]}>
           <span class="member-stat-icon" aria-hidden="true">🏆</span>
           <span class="member-stat-label">Najwyższa ocena</span>
-          <strong class="member-stat-value">{stats.highestScore ?? '—'} {medalEmoji(rankFor('highest-average'))}</strong>
+          <strong class="member-stat-value">{stats.highestScore ?? '—'} {medalEmoji(rankForScore(stats.highestScore, 'high'))}</strong>
         </div>
-        <div class:list={['member-stat-card', medalClass(rankFor('lowest-average'))]}>
+        <div class:list={['member-stat-card', medalClass(rankForScore(stats.lowestScore, 'low'))]}>
           <span class="member-stat-icon" aria-hidden="true">📉</span>
           <span class="member-stat-label">Najniższa ocena</span>
-          <strong class="member-stat-value">{stats.lowestScore ?? '—'} {medalEmoji(rankFor('lowest-average'))}</strong>
+          <strong class="member-stat-value">{stats.lowestScore ?? '—'} {medalEmoji(rankForScore(stats.lowestScore, 'low'))}</strong>
         </div>
       </div>
     </section>

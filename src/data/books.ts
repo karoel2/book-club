@@ -347,23 +347,30 @@ export function getLeaderboard(category: LeaderboardCategory): LeaderboardEntry[
       break;
   }
 
-  // Determine leaders (ties)
+  // Use displayed average precision when determining ties, and competition ranks.
   const leaderValue = getLeaderValue(sortedStats[0], category);
   const leaders = sortedStats.filter(stat => getLeaderValue(stat, category) === leaderValue);
+  let previousValue: number | undefined;
+  let rank = 0;
 
-  return sortedStats.map((stat, index) => ({
+  return sortedStats.map((stat, index) => {
+    const value = getLeaderValue(stat, category);
+    if (value !== previousValue) rank = index + 1;
+    previousValue = value;
+    return {
     user: stat,
-    rank: index + 1,
+    rank,
     isLeader: leaders.some(leader => leader.name === stat.name)
-  }));
+    };
+  });
 }
 
 /** Get the metric value for a user in a specific category */
 function getLeaderValue(user: UserStatistics, category: LeaderboardCategory): number {
   switch (category) {
     case 'activity': return user.ratedCount;
-    case 'highest-average': return user.average ?? -1;
-    case 'lowest-average': return user.average ?? 11;
+    case 'highest-average': return user.average === null ? -1 : Math.round(user.average * 100) / 100;
+    case 'lowest-average': return user.average === null ? 11 : Math.round(user.average * 100) / 100;
     case 'streak': return user.longestStreak;
   }
 }
