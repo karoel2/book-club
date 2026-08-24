@@ -16,14 +16,25 @@ if (!member) {
 
 const stats = getUserStatistics(member.name);
 const ratings = getMemberRatingsChronological(member.name);
-const rankFor = (category: 'highest-average' | 'lowest-average' | 'streak' | 'activity') =>
-  getLeaderboard(category).find((entry) => entry.user.name === member.name)?.rank;
+const memberRanks = new Map(
+  (['highest-average', 'lowest-average', 'streak', 'activity'] as const).map((category) => [
+    category,
+    getLeaderboard(category).find((entry) => entry.user.name === member.name)?.rank,
+  ]),
+);
+const rankFor = (category: 'highest-average' | 'lowest-average' | 'streak' | 'activity') => memberRanks.get(category);
+const allStats = getAllUserStatistics();
+const highScoreRanks = [...allStats]
+  .filter((user) => user.highestScore !== null)
+  .sort((a, b) => (b.highestScore ?? -1) - (a.highestScore ?? -1))
+  .map((user) => user.highestScore);
+const lowScoreRanks = [...allStats]
+  .filter((user) => user.lowestScore !== null)
+  .sort((a, b) => (a.lowestScore ?? 11) - (b.lowestScore ?? 11))
+  .map((user) => user.lowestScore);
 const rankForScore = (score: number | null, direction: 'high' | 'low') => {
   if (score === null) return undefined;
-  const values = getAllUserStatistics()
-    .map((user) => direction === 'high' ? user.highestScore : user.lowestScore)
-    .filter((value): value is number => value !== null)
-    .sort((a, b) => direction === 'high' ? b - a : a - b);
+  const values = direction === 'high' ? highScoreRanks : lowScoreRanks;
   return values.findIndex((value) => value === score) + 1;
 };
 const medalClass = (rank: number | undefined) =>
@@ -180,17 +191,6 @@ const medalEmoji = (rank: number | undefined) =>
     color: var(--ink);
   }
 
-  .visually-hidden {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-  }
   @media (max-width: 38rem) {
     .member-stats-grid { grid-template-columns: repeat(2, 9.5rem); gap: 0.45rem; }
     .member-stat-card { width: 9.5rem; padding: 0.65rem; }

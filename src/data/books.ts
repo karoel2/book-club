@@ -76,7 +76,7 @@ export function booksLabel(n: number): string {
 function buildBook(raw: RawBook, usedSlugs: Set<string>, archiveIndex: number): Book {
   const scores: MemberScore[] = Object.entries(raw.scores).map(([name, score]) => ({
     name,
-    score: typeof score === 'number' ? score : null,
+    score: typeof score === 'number' && Number.isFinite(score) && score >= 1 && score <= 10 ? score : null,
   }));
 
   const rated = scores.filter((s): s is { name: string; score: number } => s.score !== null);
@@ -209,22 +209,6 @@ export function getMemberSlug(name: string): string {
   return memberSlugByName.get(name) ?? slugify(name);
 }
 
-/** Books a member scored, paired with that score, highest first. */
-export function getMemberRatings(name: string): MemberRating[] {
-  const ratings: MemberRating[] = [];
-  for (const book of books) {
-    const entry = book.scores.find((s) => s.name === name);
-    if (entry && entry.score !== null) ratings.push({ book, score: entry.score, archiveIndex: book.archiveIndex });
-  }
-  return ratings.sort((a, b) => {
-    const byScore = b.score - a.score;
-    if (byScore !== 0) return byScore;
-    const byAverage = (b.book.average ?? -1) - (a.book.average ?? -1);
-    if (byAverage !== 0) return byAverage;
-    return a.book.title.localeCompare(b.book.title, 'pl');
-  });
-}
-
 /** Get all valid member ratings with archive indices for chronological ordering */
 export function getMemberRatingsChronological(name: string): MemberRating[] {
   const ratings: MemberRating[] = [];
@@ -291,7 +275,11 @@ export function getUserStatistics(name: string): UserStatistics {
 }
 
 /** Get all users with complete statistics */
+let allUserStatisticsCache: UserStatistics[] | undefined;
+
 export function getAllUserStatistics(): UserStatistics[] {
+  if (allUserStatisticsCache) return allUserStatisticsCache;
+
   const memberNames = new Set<string>();
   for (const book of books) {
     for (const score of book.scores) {
@@ -301,7 +289,8 @@ export function getAllUserStatistics(): UserStatistics[] {
     }
   }
 
-  return Array.from(memberNames).map(name => getUserStatistics(name));
+  allUserStatisticsCache = Array.from(memberNames).map(name => getUserStatistics(name));
+  return allUserStatisticsCache;
 }
 
 /** Leaderboard category types */
@@ -315,7 +304,12 @@ export interface LeaderboardEntry {
 }
 
 /** Get leaderboard for a specific category */
+const leaderboardCache = new Map<LeaderboardCategory, LeaderboardEntry[]>();
+
 export function getLeaderboard(category: LeaderboardCategory): LeaderboardEntry[] {
+  const cached = leaderboardCache.get(category);
+  if (cached) return cached;
+
   const allStats = getAllUserStatistics();
 
   // Filter based on category eligibility
@@ -327,6 +321,7 @@ export function getLeaderboard(category: LeaderboardCategory): LeaderboardEntry[
   }
 
   if (eligibleStats.length === 0) {
+    leaderboardCache.set(category, []);
     return [];
   }
 
@@ -353,16 +348,18 @@ export function getLeaderboard(category: LeaderboardCategory): LeaderboardEntry[
   let previousValue: number | undefined;
   let rank = 0;
 
-  return sortedStats.map((stat, index) => {
+  const leaderboard = sortedStats.map((stat, index) => {
     const value = getLeaderValue(stat, category);
     if (value !== previousValue) rank = index + 1;
     previousValue = value;
     return {
-    user: stat,
-    rank,
-    isLeader: leaders.some(leader => leader.name === stat.name)
+      user: stat,
+      rank,
+      isLeader: leaders.some(leader => leader.name === stat.name)
     };
   });
+  leaderboardCache.set(category, leaderboard);
+  return leaderboard;
 }
 
 /** Get the metric value for a user in a specific category */
