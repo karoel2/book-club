@@ -170,6 +170,34 @@ if (!ingestCall) {
   }
 }
 
+// The Logic App Function action can return 403 when the function app has
+// authLevel=function but no managed-identity connection. Convert those calls
+// to ordinary authenticated HTTP actions when the provisioner supplies the
+// host key. The key is passed through the environment and never committed.
+const functionHost = process.env.FUNCTION_HOST;
+const functionKey = process.env.FUNCTION_KEY;
+if (functionHost && functionKey) {
+  const convertFunctionCall = (action) => {
+    const id = action.inputs?.function?.id;
+    if (!id || !/\/functions\/(ingest|next-book)$/i.test(id)) return;
+    const functionName = id.match(/\/functions\/(ingest|next-book)$/i)[1];
+    const { method = 'POST', headers = {}, body } = action.inputs;
+    action.type = 'Http';
+    action.inputs = {
+      method,
+      uri: `${functionHost}/api/${functionName}?code=${encodeURIComponent(functionKey)}`,
+      headers,
+      body,
+    };
+    note(`converted ${functionName} to authenticated HTTP`);
+  };
+
+  for (const action of Object.values(def.actions)) {
+    convertFunctionCall(action);
+    for (const inner of Object.values(action.actions || {})) convertFunctionCall(inner);
+  }
+}
+
 process.stdout.write(JSON.stringify({
   location: wf.location,
   properties: { state: wf.properties.state, definition: def, parameters: wf.properties.parameters },
