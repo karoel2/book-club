@@ -129,33 +129,129 @@ macOS gotchas:
 ## Add a book by email (serverless, no computer)
 
 Instead of keeping a Mac running cron, you can **email a screenshot from your phone**
-and have the site update itself. An **Azure Function** plus a **Logic App** watching a
-Gmail inbox do exactly what the CLI does — OCR → parse → enrich → commit to GitHub
+and have the site update itself. An **Azure Function** plus a **Logic App** watching an
+**Outlook** inbox do exactly what the CLI does — OCR → parse → enrich → commit to GitHub
 (which triggers the Pages build). The parsing and enrichment are the *same shared code*
 (`scripts/lib/parse.mjs`, `scripts/metadata.mjs`); only the OCR engine differs
 (macOS Vision → **Azure AI Vision**, which reads Polish fine). Cost is ≈ $0 on the free tiers.
 
-**Day-to-day use:** attach the screenshot to an email and send it from your
-allow-listed Gmail address to the watched mailbox. Within a couple of minutes the
-book appears on the site. Same safety net as the CLI — a misread score or an
-unrecognised name comes back as *needs review* and is **not** published; you can
-reply-email the result to yourself for confirmation.
+**This is already deployed** — resource names, region and constraints are in
+**[azure/README.md](azure/README.md)**. To re-converge it after a change:
 
-**One-time setup** (~15 min) — full walkthrough with copy-paste commands in
-**[azure/README.md](azure/README.md)**. In short:
+```bash
+cd azure && ALLOWED_SENDERS=you@example.com ./provision.sh
+```
 
-1. Create a fine-grained **GitHub token** (Contents: read & write, this repo only).
-2. Provision with the Azure CLI: a resource group, an **Azure AI Vision** resource
-   (free **F0** tier), and a **Function App** (Consumption, Node 20); put the keys
-   in the function's app settings (`VISION_*`, `GITHUB_TOKEN`, `GITHUB_REPO`,
-   `INGEST_SECRET`, `ALLOWED_SENDERS`).
-3. Deploy the function: `cd azure && npm install && npm run sync && func azure functionapp publish <app>`.
-4. Create a **Logic App (Consumption)**, add the **Gmail → "When a new email
-   arrives"** trigger (authorise Google), filter to your sender, and POST each
-   attachment to the function URL. `azure/logicapp.workflow.json` mirrors these steps.
+### Day-to-day use
+
+Send the screenshot to the watched mailbox from the allow-listed address. Within a
+couple of minutes the book appears on the site.
+
+- **No special subject** — any subject works, including an empty one. (An earlier
+  version required `book-club` in the subject, which silently swallowed everything else.)
+- **Attach the image as a file.** A pasted/inline image still triggers the workflow,
+  but there's no attachment to OCR, so nothing happens.
+- **Sender must match `ALLOWED_SENDERS`**, or the function replies `403` and ignores it.
+  With no subject filter, this allow-list is the only gate on the inbox.
+- **Watch out for Focused Inbox** — mail sorted into "Other" is never seen by the trigger.
+
+Same safety net as the CLI: a misread score or an unrecognised name comes back as
+*needs review* and is **not** published. Re-sending the same screenshot is a no-op —
+books that already exist are skipped.
 
 The endpoint is protected three ways (function key, a shared-secret header, and the
 sender allow-list). The local cron/CLI route above still works as an offline fallback.
+
+## Set the next book by email
+
+The card at the top of the page — the book the club is reading now, when it meets,
+and where to get it — is set the same way. **Email one line, no attachment:**
+
+```
+Problem trzech ciał, Cixin Liu
+Problem trzech ciał, Cixin Liu, 25/08/26 18:00
+```
+
+There's no keyword: a mail *with* an attachment is a ratings screenshot, a mail
+*without* one is the next book, so a single message never does both. Then:
+
+- The **title/author split** is the same logic the screenshot parser uses, so a
+  comma inside the title survives (`Dziki, mroczny brzeg, C. McConaghy`) and either
+  order works (`S. King, Worek Kości`).
+- The book is **confirmed against Google Books / Open Library**. A line that names
+  only one thing and matches nothing is refused with a reply, so `dobra robota`
+  can't become the next book.
+- **Leave the date out** and the first meeting is `25/08/26`; later meetings
+  advance by a fortnight from the previous scheduled Tuesday. Leave the time out
+  and the previous one carries over (or `18:00` for the first meeting).
+- All five services are **checked live** and the ✓/✗ marks are committed with the
+  book, along with a cover if the databases have one.
+- You get a **reply** with what was set:
+
+  ```
+  📖 Następna książka: Problem trzech ciał — Cixin Liu
+  📅 Spotkanie: 25/08/26, 18:00
+  🎧 Storytel ✅ · BookBeat ❌ · Audioteka ✅ · Legimi ✅ · B. Raczyńskich ✅
+  ```
+
+Re-sending the same book changes nothing. It all lands in
+**[`src/data/next-meeting.json`](src/data/next-meeting.json)**, which you can also
+edit by hand. To do it from a computer instead:
+
+```bash
+npm run next -- "Problem trzech ciał, Cixin Liu"   # set it (add --push to publish)
+npm run next -- --recheck --push                   # same book, fresh availability
+npm run next -- --dry-run "…"                      # preview, write nothing
+```
+
+### Where the ✓, ✗ and ? come from
+
+`scripts/lib/availability.mjs` asks all five services directly, in parallel:
+
+| Service | How it's asked |
+|---|---|
+| Storytel | public search API; requires an `abook` format, not just an ebook |
+| BookBeat | `api.bookbeat.com`, Polish market; requires an `audiobookisbn` |
+| Audioteka | no API, but its search page is server-rendered — results parsed from the HTML |
+| Legimi | the JSON catalogue API its React app hydrates from (see below) |
+| B. Raczyńskich | Ex Libris Primo — and a copy must be **on the shelf**, not merely catalogued |
+
+A hit counts only if title *and* author match. Two rules earn their keep there:
+containment is measured in **whole words** (as a substring, `Achaja` sits inside
+*Wojna Rzymu z Achajami* — a different book entirely), and the author is scored by
+how much of *our* name the catalogue accounts for, so `S. Fitzek` still matches
+`Fitzek, Sebastian (1971- ) Autor` without the extra words dragging it under.
+
+The search term is always the **title alone** — these engines AND their terms, so
+adding the author returns nothing at all. If the full title finds nothing, the
+subtitle is tried on its own (Legimi files *Wiedźmin. Ostatnie życzenie* as plain
+*Ostatnie życzenie*), then the first three words.
+
+**Legimi needed a workaround.** It renders results in the browser and its HTML ships
+an empty book list, so there's nothing to scrape. But every page embeds the state its
+app boots from, including the anonymous API key the app then uses — so we read that
+key out of the page and call the same catalogue endpoint. Nothing is hardcoded here:
+if Legimi rotates the key, the next run picks up the new one, and if the page ever
+stops carrying one the check reports `?` rather than guessing.
+
+`?` means *nobody could ask* — a timeout, a layout change, a missing key. It is never
+a stand-in for "no", because a red cross the site never verified is worse than an
+honest blank. It links to that service's search so you can look yourself.
+
+**What ✓ claims**: the service has the audiobook in its catalogue — not that it is
+free on whichever plan you happen to pay for. The distinction is real on Legimi,
+whose catalogue search cannot filter by subscription at all (only by format; the
+`format=unlimited_audio` in the old hardcoded links did nothing). *Problem trzech
+ciał*, for instance, is flagged `isInSubscription: false` there while its page
+advertises the audiobook under the "ebooki+audiobooki bez limitu" plan. Reading that
+per-book flag would cost one extra request per service and still can't be said in one
+checkmark, so the card sticks to catalogue presence — the same standard Audioteka,
+also a shop, is held to.
+
+> The Python package in `audiobook_scraper/` was the first attempt at this. Three of
+> its five endpoints (BookBeat's and Audioteka's `/api/search`, Legimi's result page)
+> no longer exist and answer `404`, which is why those marks were hard-coded `✗`.
+> Nothing on the site uses it now; the Node module above is the live one.
 
 ## Hosting on GitHub Pages (free)
 

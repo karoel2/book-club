@@ -15,12 +15,38 @@ function client() {
   return new Octokit({ auth: token });
 }
 
-export async function loadBooksJson() {
+/**
+ * Read and parse a JSON file from the repo. A file that isn't there yet is not
+ * an error — `fallback` is returned — so the first next-meeting mail works on a
+ * repo that has never had one.
+ */
+export async function loadJson(path, fallback = undefined) {
   const gh = client();
   const { owner, repo: r, branch } = repo();
-  const res = await gh.repos.getContent({ owner, repo: r, path: 'src/data/books.json', ref: branch });
-  const content = Buffer.from(res.data.content, 'base64').toString('utf8');
-  return JSON.parse(content);
+  try {
+    const res = await gh.repos.getContent({ owner, repo: r, path, ref: branch });
+    return JSON.parse(Buffer.from(res.data.content, 'base64').toString('utf8'));
+  } catch (e) {
+    if (e.status === 404 && fallback !== undefined) return fallback;
+    throw e;
+  }
+}
+
+export async function loadBooksJson() {
+  return loadJson('src/data/books.json');
+}
+
+/** Is this path already in the repo? Used to leave an existing cover alone. */
+export async function fileExists(path) {
+  const gh = client();
+  const { owner, repo: r, branch } = repo();
+  try {
+    await gh.repos.getContent({ owner, repo: r, path, ref: branch });
+    return true;
+  } catch (e) {
+    if (e.status === 404) return false;
+    throw e;
+  }
 }
 
 /**

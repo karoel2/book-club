@@ -1,0 +1,23 @@
+# Copy to deployment.local.sh (git-ignored) and fill in your real resource names.
+# `provision.sh` sources deployment.local.sh automatically when it exists.
+#
+# Discover the names of an existing deployment with:
+#   az resource list -g <resource-group> --query "[].{name:name,type:type}" -o table
+
+export RG=<resource-group>
+export LOC=<region>                    # must be permitted by your subscription's policy:
+                                       #   az policy assignment list \
+                                       #     --query "[].parameters.listOfAllowedLocations.value"
+export VISION=<vision-resource>        # kind=ComputerVision, SKU F0 (one free per subscription)
+export STORAGE=<storage-account>
+export FN=<function-app>
+export LA=<logic-app>
+export CONN=<mail-connection>          # never re-create it — that drops the OAuth consent
+
+export GITHUB_REPO=<owner>/<repo>
+export GITHUB_BRANCH=main
+export ALLOWED_SENDERS=you@example.com
+
+export FN_HOST="https://$FN.azurewebsites.net"
+# Host key (never store it here — read it on demand):
+#   az functionapp keys list -n $FN -g $RG --query functionKeys.default -o tsv

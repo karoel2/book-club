@@ -1,5 +1,5 @@
 {
-  "//": "Office 365 Outlook variant. Paste into the Logic App 'Code view' (or build the same in the Designer). Replace <FUNCTION_URL_WITH_CODE> and <INGEST_SECRET>. The Office 365 Outlook connection must be created + authorised in the Designer; its reference fills $connections['office365']. Sender allow-listing is enforced by the function (ALLOWED_SENDERS), so there's no condition here. fetchOnlyWithAttachment=false so inline-image mails still trigger (the foreach is simply empty when there are no real attachments). Outlook attachment fields are camelCase: contentBytes / name.",
+  "//": "Office 365 Outlook variant. Paste into the Logic App 'Code view' (or build the same in the Designer). Replace <FUNCTION_URL_WITH_CODE> and <INGEST_SECRET>. The Office 365 Outlook connection must be created + authorised in the Designer; its reference fills $connections['office365']. Sender allow-listing is enforced by the function (ALLOWED_SENDERS), so there's no condition here. fetchOnlyWithAttachment=false so inline-image mails still trigger (the foreach is simply empty when there are no real attachments). Outlook attachment fields are camelCase: contentBytes / name. Call_next_book sends the mail *body* to the next-book function, so a mail reading \"Tytuł, Autor\" sets the next-meeting card; it ignores any mail that carries an attachment. It runs after the attachment loop rather than beside it, to match the deployed Outlook.com definition (logicapp.template.json), where the two jobs would otherwise race a shared variable.",
   "definition": {
     "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
     "contentVersion": "1.0.0.0",
@@ -43,6 +43,24 @@
                 "from": "@triggerBody()?['from']"
               }
             }
+          }
+        }
+      },
+      "Call_next_book": {
+        "type": "Http",
+        "runAfter": { "For_each_attachment": ["Succeeded", "Failed"] },
+        "inputs": {
+          "method": "POST",
+          "uri": "<NEXT_BOOK_FUNCTION_URL_WITH_CODE>",
+          "headers": {
+            "Content-Type": "application/json",
+            "x-ingest-secret": "<INGEST_SECRET>"
+          },
+          "body": {
+            "body": "@coalesce(triggerBody()?['body'], triggerBody()?['bodyPreview'], '')",
+            "subject": "@triggerBody()?['subject']",
+            "from": "@triggerBody()?['from']",
+            "hasAttachments": "@greater(length(coalesce(triggerBody()?['attachments'], json('[]'))), 0)"
           }
         }
       }
