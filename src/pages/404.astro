@@ -1,0 +1,114 @@
+---
+import Base from '../layouts/Base.astro';
+import { url } from '../lib/url';
+---
+
+<Base title="Nie znaleziono — Klub Książki">
+  <main class="container">
+    <div class="error-hero">
+      <h1 class="error-title">404</h1>
+      <p class="error-subtitle">Strona nie została znaleziona</p>
+      <p class="error-text">
+        Przepraszamy, nie możemy znaleźć strony, której szukasz.
+        Może została przeniesiona lub usunięta.
+      </p>
+      <div class="error-actions">
+        <a class="error-button primary" href={url('/')}>
+          ← Powrót do rankingu
+        </a>
+        <a class="error-button secondary" href={url('/') + '#user-stats-heading'}>
+          Przeglądaj statystyki członków
+        </a>
+      </div>
+    </div>
+  </main>
+
+  <style>
+    .container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
+      padding: 2rem 1rem;
+    }
+
+    .error-hero {
+      text-align: center;
+      max-width: 32rem;
+    }
+
+    .error-title {
+      font-size: clamp(4rem, 15vw, 8rem);
+      font-weight: 800;
+      color: var(--accent);
+      margin: 0 0 0.5rem;
+      line-height: 1;
+    }
+
+    .error-subtitle {
+      font-size: clamp(1.5rem, 5vw, 2rem);
+      font-weight: 600;
+      color: var(--ink);
+      margin: 0 0 1rem;
+    }
+
+    .error-text {
+      font-size: 1.1rem;
+      color: var(--muted);
+      line-height: 1.6;
+      margin: 0 0 2rem;
+    }
+
+    .error-actions {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .error-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.75rem 1.5rem;
+      border-radius: var(--radius);
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.15s ease;
+    }
+
+    .error-button.primary {
+      background: var(--accent);
+      color: white;
+      border: 1px solid var(--accent);
+    }
+
+    .error-button.primary:hover {
+      background: color-mix(in srgb, var(--accent) 90%, black);
+      border-color: color-mix(in srgb, var(--accent) 90%, black);
+    }
+
+    .error-button.secondary {
+      background: transparent;
+      color: var(--accent);
+      border: 1px solid var(--line-strong);
+    }
+
+    .error-button.secondary:hover {
+      background: color-mix(in srgb, var(--accent) 8%, transparent);
+      border-color: var(--accent);
+    }
+
+    @media (max-width: 34rem) {
+      .error-actions {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .error-button {
+        width: 100%;
+        max-width: 20rem;
+      }
+    }
+  </style>
+</Base>
