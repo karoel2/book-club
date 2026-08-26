@@ -97,10 +97,12 @@ func azure functionapp publish "$FN" --build remote --javascript
 
 say "Converging the workflow (mail-trigger filters + the next-book branch)"
 LA_API="https://management.azure.com/subscriptions/$SUB/resourceGroups/$RG/providers/Microsoft.Logic/workflows/$LA"
+FUNCTION_KEY=$(az functionapp keys list -n "$FN" -g "$RG" --query functionKeys.default -o tsv)
 if [ -z "$LA" ]; then
   echo "  LA not set — skipping"
 elif az rest --method get --uri "$LA_API?api-version=2019-05-01" > /tmp/la-live.json 2>/dev/null; then
-  node scripts/patch-logicapp.mjs < /tmp/la-live.json > /tmp/la-body.json
+  FUNCTION_HOST="https://$FN.azurewebsites.net" FUNCTION_KEY="$FUNCTION_KEY" \
+    node scripts/patch-logicapp.mjs < /tmp/la-live.json > /tmp/la-body.json
   az rest --method put --uri "$LA_API?api-version=2019-05-01" --body @/tmp/la-body.json -o none
   echo "  patched $LA"
 else

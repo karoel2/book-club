@@ -170,6 +170,40 @@ if (!ingestCall) {
   }
 }
 
+// Consumption Logic App Function actions can return 403 when the function app
+// uses authLevel=function without a managed-identity connection. When supplied
+// by the provisioner, use the host key with a normal HTTP action instead.
+const functionHost = process.env.FUNCTION_HOST;
+const functionKey = process.env.FUNCTION_KEY;
+if (functionHost && functionKey) {
+  const convertFunctionCall = (action) => {
+    const id = action.inputs?.function?.id;
+    if (!id) {
+      if (action.type === 'Http' && /\/api\/(ingest|next-book)\?/i.test(action.inputs?.uri || '')) {
+        action.inputs.headers = { ...(action.inputs.headers || {}), 'x-functions-key': functionKey };
+        note('refreshed the Function key on an HTTP call');
+      }
+      return;
+    }
+    if (!/\/functions\/(ingest|next-book)$/i.test(id)) return;
+    const functionName = id.match(/\/functions\/(ingest|next-book)$/i)[1];
+    const { method = 'POST', headers = {}, body } = action.inputs;
+    action.type = 'Http';
+    action.inputs = {
+      method,
+      uri: `${functionHost}/api/${functionName}?code=${functionKey}`,
+      headers: { ...headers, 'x-functions-key': functionKey },
+      body,
+    };
+    note(`converted ${functionName} to authenticated HTTP`);
+  };
+
+  for (const action of Object.values(def.actions)) {
+    convertFunctionCall(action);
+    for (const inner of Object.values(action.actions || {})) convertFunctionCall(inner);
+  }
+}
+
 process.stdout.write(JSON.stringify({
   location: wf.location,
   properties: { state: wf.properties.state, definition: def, parameters: wf.properties.parameters },
