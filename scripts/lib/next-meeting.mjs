@@ -217,15 +217,19 @@ export function parseNextBookEmail(body) {
  */
 export function readingsFor(parsed) {
   const out = [];
+  // Lead with the settled split only when there *was* one. On an ambiguous line
+  // `parsed.title` is the whole header with no author, and leading with that
+  // hands the question to the weakest test we have: with no author to check,
+  // `accept` falls back to token overlap, so "My, Zamiatin" matches a book
+  // *about* the novel ("Zamiatin i ego roman «My»") and wins before the real
+  // split is ever tried. headerCandidates already ranks the whole header last;
+  // this keeps that ranking instead of undoing it.
+  const settled = parsed.ambiguous ? [] : [{ title: parsed.title, author: parsed.author }];
   // The title on its own goes last: Google Books is rate-limited without a key,
   // and Open Library — the fallback — often knows a Polish edition by title
   // while filing it under a differently-spelled author. Asking author-first
   // keeps the precise answer preferred, and this rescues the rest.
-  const readings = [
-    { title: parsed.title, author: parsed.author },
-    ...(parsed.candidates || []),
-    { title: parsed.title, author: null },
-  ];
+  const readings = [...settled, ...(parsed.candidates || []), { title: parsed.title, author: null }];
   for (const c of readings) {
     if (!c.title) continue;
     if (out.some((o) => o.title === c.title && o.author === (c.author || null))) continue;
