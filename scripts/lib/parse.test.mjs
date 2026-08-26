@@ -72,8 +72,14 @@ test('later commas are tried after the last one', () => {
 });
 
 test('single-letter fragments are not offered as titles', () => {
-  // WORD_RE rejects OCR debris, so "X, Kowalski" yields no "X|…" reading.
+  // TITLE_RE rejects OCR debris, so "X, Kowalski" yields no "X|…" reading.
   assert.ok(!cand(['X, Kowalski']).some((c) => c.startsWith('X|')));
+});
+
+test('a two-letter title is still offered as a title', () => {
+  // Zamiatin's "My" — short enough that the chrome filter used to eat it, which
+  // left the correct reading out of the candidates entirely.
+  assert.ok(cand(['My, Jewgienij Zamiatin']).includes('My|Jewgienij Zamiatin'));
 });
 
 test('candidates are deduped', () => {
