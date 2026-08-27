@@ -188,10 +188,11 @@ async function fromOpenLibrary(title, author) {
 }
 
 /** Merge Google Books (preferred for text) with Open Library (covers/fallback). */
-export async function fetchMetadata(title, author) {
+export async function fetchMetadata(title, author, { reportErrors = false } = {}) {
   let g = null;
   let o = null;
   let googleErr = null;
+  let openLibraryErr = null;
   try {
     g = await fromGoogle(title, author);
   } catch (e) {
@@ -199,11 +200,13 @@ export async function fetchMetadata(title, author) {
   }
   try {
     o = await fromOpenLibrary(title, author);
-  } catch {
+  } catch (error) {
+    openLibraryErr = error;
     /* ignore */
   }
   // Only surface the quota problem when Open Library couldn't cover for it.
   if (!g && !o && googleErr?.quota) throw googleErr;
+  if (!g && !o && reportErrors && (openLibraryErr || googleErr)) throw openLibraryErr || googleErr;
   if (!g && !o) return null;
 
   const description = g?.description || o?.description || null;
@@ -247,6 +250,91 @@ export async function resolveHeader(candidates, { limit = 5 } = {}) {
     if (meta) return { title: c.title, author: c.author, meta };
   }
   return null;
+}
+
+/**
+ * Perform fallback metadata lookup using original title when primary lookup
+ * yields insufficient categories or cover. Returns enhanced result with
+ * fallback attribution and source information.
+ */
+export async function fetchMetadataWithFallback(primaryTitle, author, originalTitle, { hasUsableCover = false } = {}) {
+  // Skip fallback if original title is same as primary or missing
+  if (!originalTitle || originalTitle === primaryTitle) {
+    return await fetchMetadata(primaryTitle, author);
+  }
+
+  // Get primary result first
+  const primaryResult = await fetchMetadata(primaryTitle, author);
+
+  // Check if fallback is needed (no categories or no usable cover)
+  const needsCategories = !primaryResult?.categories?.length;
+  const needsCover = !hasUsableCover;
+
+  if (!needsCategories && !needsCover) {
+    return { ...primaryResult, fallbackUsed: false };
+  }
+
+  // Perform fallback lookup
+  let fallbackResult = null;
+  let fallbackError = null;
+  try {
+    fallbackResult = await fetchMetadata(originalTitle, author, { reportErrors: true });
+  } catch (error) {
+    fallbackError = error;
+  }
+
+  if (!fallbackResult && !fallbackError) {
+    // Fallback found nothing
+    return {
+      ...primaryResult,
+      fallbackUsed: true,
+      fallbackOutcome: 'empty',
+      fallbackOriginalTitle: originalTitle
+    };
+  }
+
+  if (fallbackError) {
+    // Fallback failed
+    return {
+      ...primaryResult,
+      fallbackUsed: true,
+      fallbackOutcome: 'failure',
+      fallbackOriginalTitle: originalTitle,
+      fallbackError: fallbackError.message
+    };
+  }
+
+  // Merge results: categories from fallback if needed, cover URLs combined
+  const mergedCategories = needsCategories && fallbackResult.categories?.length
+    ? fallbackResult.categories
+    : primaryResult?.categories || [];
+
+  const mergedCoverUrls = [...(primaryResult?.coverUrls || [])];
+  if (fallbackResult?.coverUrls) {
+    for (const url of fallbackResult.coverUrls) {
+      if (!mergedCoverUrls.includes(url)) {
+        mergedCoverUrls.push(url);
+      }
+    }
+  }
+
+  // Always include ISBN from primary if available
+  const mergedIsbn = primaryResult?.isbn || fallbackResult?.isbn || null;
+
+  return {
+    description: primaryResult?.description || null, // Never use fallback description
+    categories: mergedCategories,
+    isbn: mergedIsbn,
+    coverUrls: mergedCoverUrls,
+    sources: [...(primaryResult?.sources || []), ...(fallbackResult?.sources || [])].filter(Boolean),
+    fallbackUsed: true,
+    fallbackOutcome: 'success',
+    fallbackOriginalTitle: originalTitle,
+    fallbackSupplied: {
+      categories: needsCategories && fallbackResult.categories?.length,
+      cover: fallbackResult.coverUrls?.length
+    }
+  };
 }
 
 /**

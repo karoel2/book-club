@@ -35,6 +35,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve, basename, extname } from 'node:path';
 import { fetchMetadata, downloadBestCover, resolveHeader } from './metadata.mjs';
 import { slugify, parseBlocks, finalizeBooks, buildRoster, serializeBooks, applyHeaderResolution } from './lib/parse.mjs';
+import { fetchMetadataWithFallback } from './metadata.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
@@ -100,7 +101,7 @@ async function enrich(entry, slug, force = false) {
   }
   let meta;
   try {
-    meta = await fetchMetadata(entry.title, entry.author);
+    meta = await fetchMetadataWithFallback(entry.title, entry.author, entry.originalTitle, { hasUsableCover: hasCover(slug) });
   } catch (e) {
     log(`      · wzbogacanie nie powiodło się: ${e.message}`);
     return;
@@ -126,7 +127,10 @@ async function enrich(entry, slug, force = false) {
   }
 
   const src = meta.sources.join(' + ') || '—';
-  log(`      + opis: ${entry.description ? 'tak' : 'nie'} · kategorie: ${(entry.categories || []).join(', ') || '—'} · ${coverMsg}  [${src}]`);
+  const fallbackMsg = meta.fallbackUsed
+    ? ` · oryginalny tytuł „${meta.fallbackOriginalTitle}” — ${meta.fallbackOutcome === 'success' ? 'zapożyczono dane' : meta.fallbackOutcome === 'empty' ? 'nie znaleziono danych' : `błąd: ${meta.fallbackError}`}`
+    : '';
+  log(`      + opis: ${entry.description ? 'tak' : 'nie'} · kategorie: ${(entry.categories || []).join(', ') || '—'} · ${coverMsg}  [${src}]${fallbackMsg}`);
   if (DRY && entry.description) log(`        opis: ${entry.description.slice(0, 160)}${entry.description.length > 160 ? '…' : ''}`);
 }
 
