@@ -2,7 +2,9 @@
   {
     "title": "Chirurg",
     "author": "Tess Gerritsen",
-    "scores": { "Asia": 5, "Michał": 9, "Karolina": 7, "Bartek": 8, "Jaśmin": 9, "Zosia": 7, "Sara": 9 }
+    "scores": { "Asia": 5, "Michał": 9, "Karolina": 7, "Bartek": 8, "Jaśmin": 9, "Zosia": 7, "Sara": 9 },
+    "categories": ["Fiction"],
+    "description": "s Nachts dringt De Chirurg de slaapkamers van nietsvermoedende vrouwen binnen en laat hen onvoorstelbare verschrikkingen ondergaan. De enige hoop van de politie is dokter Catherine Cordell, slachtoffer van een identieke misdaad. Twee jaar geleden schoot ze haar aanrander neer. Catherines wereld stort in als deze nieuwe moordenaar de details van toen blijkt te kennen. Kan rechercheur Thomas Moore haar beschermen tegen deze nietsontziende jager?"
   },
   {
     "title": "Kwiaty dla Algernona",
@@ -55,12 +57,16 @@
   {
     "title": "Achaja",
     "author": "Ziemiański",
-    "scores": { "Karol": 9, "Sara": 6, "Michał": 8, "Zosia": 6, "Paweł": 6 }
+    "scores": { "Karol": 9, "Sara": 6, "Michał": 8, "Zosia": 6, "Paweł": 6 },
+    "categories": ["Fantasy fiction"],
+    "description": "Achaja byla kiedys ksiezniczka poteznego Królestwa Troy. Zdazyla jednak juz o tym zapomniec ... Ucieka. Z pietnem niewolnicy i tatuazem dziewki z domu publicznego ... Czy istnieje na swiecie miejsce, gdzie bedzie mogla normalnie zyc? A jesli istnieje, czy ironicznie usmiechniety los nie wlozy jej na glowe ... ksiazecych ozdób? A nagroda za zwyciestwo jest kolejna niebezpieczna wyprawa. Zakon ma nowe zadanie: zemscic sie na Zaanie i Siriusie. Trzeba ostrzec ksiecia Oriona, ze w lozu jego syna sypia oszust ..."
   },
   {
     "title": "Płonące Dziewczyny",
     "author": "C.J. Tudor",
-    "scores": { "Bartek": 6, "Paweł": 7, "Zosia": 7, "Michał": 7, "Karol": 6, "Sara": 6 }
+    "scores": { "Bartek": 6, "Paweł": 7, "Zosia": 7, "Michał": 7, "Karol": 6, "Sara": 6 },
+    "categories": ["Clergy"],
+    "description": "Witaj w Chapel Croft, pozornie uroczym miejscu, które ma również swoją ciemną stronę. W XVI wieku spalono tutaj na stosie grupę wieśniaków - w tym dwie nastolatki. Z kolei w nie tak odległej przeszłości, 30 lat temu, zaginęły tam dwie dziewczyny. Ostatnia tragedia miała miejsce jednak niedawno. Dwa miesiące temu proboszcz miejscowej parafii popełnił samobójstwo. Tylko czy to już koniec dramatu wioski? Do Chapel Croft przybywa Jack Brooks wraz ze swoją 15-letnią córką Flo. Pastorka i zarazem samotna matka ma objąć parafię po zmarłym poprzedniku. Przeglądając jego rzeczy, dokonuje zaskakującego odkrycia - zestaw do egzorcyzmów i notkę zawierającą cytat z Biblii. Pochodzi ona z Ewangelii według św. Łukasza i brzmi: \"Nie ma bowiem nic ukrytego, co by nie wyszło na jaw, ani nic tajnego, co by się nie stało wiadome\". Jack i Flo po zadomowieniu się w Chapel Croft zaczynają lepiej poznawać wieś i jej mieszkańców. Z czasem obie zostają wciągnięte w tajemnice, podejrzenia i podziały. Ujawnia się też mrok, który kryje się w tym miejscu. Flo w starej kaplicy zaczyna miewać również wizje. Okazuje się, że są duchy, które nie mogą zaznać spokoju. Mimo to odkrycie prawdy nie jest wcale łatwe. Mieszkańcy Chapel Croft ewidentnie mają coś do ukrycia i nikt nie ufa obcym, do których obecnie zaliczają się Jack i Flo."
   },
   {
     "title": "Worek Kości",
@@ -75,12 +81,15 @@
   {
     "title": "Poławiacze Sunu",
     "author": "M. Organiściak",
-    "scores": { "Paweł": 7, "Karol": 6, "Agata": 5, "Zosia": 7, "Kasia": 6, "Sara": 7 }
+    "scores": { "Paweł": 7, "Karol": 6, "Agata": 5, "Zosia": 7, "Kasia": 6, "Sara": 7 },
+    "categories": ["Fiction"],
+    "description": "Nie każdy upadek kończy się na dnie. Czasem dno jest dopiero początkiem drogi. Życie Martena, oficera marynarki Koralowego Lorda, miało być prostą ścieżką ku zaszczytom. Skończyło się jednak na polu bitwy, w krwi kompanów, gdzie dwa księżyce zwiastowały szaleństwo. Aby przeżyć, Marten musiał sięgnąć po sunu - narkotyk, który raz skosztowany, staje się jedynym panem i władcą. To wyrok zapisany w żyłach, przed którym nie ma ucieczki. Oto historia dwóch braci, których los rozdzielił, a ambicja i błędy przeszłości znów pchnęły ku sobie. Starszego, który walczy o resztki godności w oparach magicznego głodu, i młodszego, Cobara, który w pogoni za wielkością zbyt często zapomina, że dno rzeki jest bliżej niż szczyt masztu. To kronika świata, gdzie salwy burtowe i świst korsarskich kordelasów zagłuszają szept politycznych intryg. Magia nie jest tu darem bogów, lecz bronią, która najpierw uzależnia, a potem pożera duszę i ciało. A gdy wielka polityka zderza się z desperacją wyjętych spod prawa, jedno pozostaje pewne - każda decyzja ma swoją cenę, najczęściej płaconą krwią."
   },
   {
     "title": "Król Szczurów",
     "author": "J. Clavell",
-    "scores": { "Asia": 5, "Paweł": 7, "Agata": 6, "Kasia": 6, "Karol": 6, "Sara": 5 }
+    "scores": { "Asia": 5, "Paweł": 7, "Agata": 6, "Kasia": 6, "Karol": 6, "Sara": 5 },
+    "categories": ["Fiction"]
   },
   {
     "title": "Mimika",
@@ -89,8 +98,9 @@
   },
   {
     "title": "Stowarzyszenie Umarłych Poetów",
-    "author": null,
-    "scores": { "Paulina": 5, "Zosia": 8, "Paweł": 6, "Nicole": 8, "Asia": 5, "Bartek": 7, "Karolina": 5, "Karol": 6, "Jaśmin": 8, "Kasia": 4, "Sara": 6 }
+    "author": "Nancy H. Kleinbaum",
+    "scores": { "Paulina": 5, "Zosia": 8, "Paweł": 6, "Nicole": 8, "Asia": 5, "Bartek": 7, "Karolina": 5, "Karol": 6, "Jaśmin": 8, "Kasia": 4, "Sara": 6 },
+    "categories": ["Fiction"]
   },
   {
     "title": "Dungeon Crawler Carl",
@@ -102,11 +112,13 @@
   {
     "title": "Kiedy żurawie odlatują na południe",
     "author": "Lisa Ridzen",
-    "scores": { "Zosia": 8, "Kasia": 8, "Karol": 6, "Nicole": 9, "Sara": 8 }
+    "scores": { "Zosia": 8, "Kasia": 8, "Karol": 6, "Nicole": 9, "Sara": 8 },
+    "categories": ["Fathers and sons"],
+    "description": "Kiedy żurawie odlatują na południe to poruszająca opowieść o życiu, stracie i przemijaniu, osadzona w malowniczym hrabstwie Jämtland w Szwecji. Historia skupia się na relacjach międzyludzkich, szczególnie między ojcem a synem, oraz na ich wspólnym zmaganiu się z poczuciem straty. W tle pojawia się głęboka refleksja nad związkiem człowieka z naturą i zwierzętami, a także nad starzeniem się i akceptacją nieuchronnych zmian w życiu."
   },
   {
     "title": "Problem trzech ciał",
-    "author": null,
+    "author": "Cixin Liu",
     "scores": { "Zosia": 6, "Asia": 6, "Karol": 8, "Sara": 4 }
   }
 ]

@@ -354,6 +354,7 @@ export function serializeBooks(books) {
       `    "author": ${b.author == null ? 'null' : JSON.stringify(b.author)}`,
       `    "scores": { ${scores} }`,
     ];
+    if (b.originalTitle) lines.push(`    "originalTitle": ${JSON.stringify(b.originalTitle)}`);
     if (b.categories && b.categories.length) lines.push(`    "categories": ${JSON.stringify(b.categories)}`);
     if (b.description) lines.push(`    "description": ${JSON.stringify(b.description)}`);
     return `  {\n${lines.join(',\n')}\n  }`;

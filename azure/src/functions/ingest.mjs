@@ -10,6 +10,7 @@
 import { app } from '@azure/functions';
 import { parseBlocks, finalizeBook, buildRoster, slugify, serializeBooks, applyHeaderResolution } from '../shared/parse.mjs';
 import { fetchMetadata, pickBestCover, resolveHeader } from '../shared/metadata.mjs';
+import { fetchMetadataWithFallback } from '../shared/metadata.mjs';
 import { ocrImage } from '../ocr.mjs';
 import { loadBooksJson, commitChanges } from '../github.mjs';
 import { extractFrom, allowedSender, unauthorized } from '../mail.mjs';
@@ -115,13 +116,16 @@ app.http('ingest', {
 
       if (p.resolvedMeta || p.entry.author) {
         try {
-          const meta = p.resolvedMeta || (await fetchMetadata(p.entry.title, p.entry.author));
+          const meta = p.resolvedMeta || (await fetchMetadataWithFallback(p.entry.title, p.entry.author, p.entry.originalTitle));
           if (meta) {
             if (meta.description) p.entry.description = meta.description;
             if (meta.categories?.length) p.entry.categories = meta.categories;
             if (meta.coverUrls?.length) {
               const cover = await pickBestCover(meta.coverUrls);
               if (cover) coverFiles.push({ path: `src/assets/covers/${p.slug}.${cover.ext}`, buf: cover.buf });
+            }
+            if (meta.fallbackUsed) {
+              context.log(`fallback dla „${p.entry.title}”: oryginalny tytuł „${meta.fallbackOriginalTitle}”, wynik ${meta.fallbackOutcome}`);
             }
           }
         } catch (e) {
