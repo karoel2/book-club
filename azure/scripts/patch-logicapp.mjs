@@ -179,7 +179,7 @@ if (functionHost && functionKey) {
   const convertFunctionCall = (action) => {
     const id = action.inputs?.function?.id;
     if (!id) {
-      if (action.type === 'Http' && /\/api\/(ingest|next-book)\?/i.test(action.inputs?.uri || '')) {
+      if (action.type === 'Http' && /\/api\/(ingest|next-book)(?:\?|$)/i.test(action.inputs?.uri || '')) {
         action.inputs.headers = { ...(action.inputs.headers || {}), 'x-functions-key': functionKey };
         note('refreshed the Function key on an HTTP call');
       }
@@ -191,7 +191,7 @@ if (functionHost && functionKey) {
     action.type = 'Http';
     action.inputs = {
       method,
-      uri: `${functionHost}/api/${functionName}?code=${functionKey}`,
+      uri: `${functionHost}/api/${functionName}`,
       headers: { ...headers, 'x-functions-key': functionKey },
       body,
     };
