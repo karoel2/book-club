@@ -316,7 +316,7 @@ export function finalizeBook(block, roster, strict = false, { sheetHasAverages =
   }
 
   if (!title) block_('Nie rozpoznano tytułu');
-  else if (!WORD_RE.test(title)) block_(`Tytuł wygląda na śmieci z OCR: „${title}"`);
+  else if (!TITLE_RE.test(title)) block_(`Tytuł wygląda na śmieci z OCR: „${title}"`);
 
   if (fragment) warn(`Fragment: ${block.scores.length} ocen(y) — prawdopodobnie ucięty brzeg zrzutu, pomijam`);
 
