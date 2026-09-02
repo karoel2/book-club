@@ -125,7 +125,12 @@ app.http('ingest', {
               if (cover) coverFiles.push({ path: `src/assets/covers/${p.slug}.${cover.ext}`, buf: cover.buf });
             }
             if (meta.fallbackUsed) {
-              context.log(`fallback dla „${p.entry.title}”: oryginalny tytuł „${meta.fallbackOriginalTitle}”, wynik ${meta.fallbackOutcome}`);
+              const outcome = {
+                success: 'zapożyczono dane',
+                empty: 'nie znaleziono danych',
+                failure: `błąd: ${meta.fallbackError || 'nieznany'}`,
+              }[meta.fallbackOutcome] || 'pominięto';
+              context.log(`fallback dla „${p.entry.title}”: oryginalny tytuł „${meta.fallbackOriginalTitle}” — ${outcome}`);
             }
           }
         } catch (e) {

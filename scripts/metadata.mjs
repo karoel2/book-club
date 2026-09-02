@@ -258,17 +258,19 @@ export async function resolveHeader(candidates, { limit = 5 } = {}) {
  * fallback attribution and source information.
  */
 export async function fetchMetadataWithFallback(primaryTitle, author, originalTitle, { hasUsableCover = false } = {}) {
+  const fallbackTitle = typeof originalTitle === 'string' ? originalTitle.trim() : '';
   // Skip fallback if original title is same as primary or missing
-  if (!originalTitle || originalTitle === primaryTitle) {
+  if (!fallbackTitle || fallbackTitle === primaryTitle) {
     return await fetchMetadata(primaryTitle, author);
   }
 
   // Get primary result first
   const primaryResult = await fetchMetadata(primaryTitle, author);
+  const primary = primaryResult || { description: null, categories: [], isbn: null, coverUrls: [], sources: [] };
 
   // Check if fallback is needed (no categories or no usable cover)
   const needsCategories = !primaryResult?.categories?.length;
-  const needsCover = !hasUsableCover;
+  const needsCover = !hasUsableCover && !primaryResult?.coverUrls?.length;
 
   if (!needsCategories && !needsCover) {
     return { ...primaryResult, fallbackUsed: false };
@@ -278,7 +280,7 @@ export async function fetchMetadataWithFallback(primaryTitle, author, originalTi
   let fallbackResult = null;
   let fallbackError = null;
   try {
-    fallbackResult = await fetchMetadata(originalTitle, author, { reportErrors: true });
+    fallbackResult = await fetchMetadata(fallbackTitle, author, { reportErrors: true });
   } catch (error) {
     fallbackError = error;
   }
@@ -286,20 +288,20 @@ export async function fetchMetadataWithFallback(primaryTitle, author, originalTi
   if (!fallbackResult && !fallbackError) {
     // Fallback found nothing
     return {
-      ...primaryResult,
+      ...primary,
       fallbackUsed: true,
       fallbackOutcome: 'empty',
-      fallbackOriginalTitle: originalTitle
+      fallbackOriginalTitle: fallbackTitle
     };
   }
 
   if (fallbackError) {
     // Fallback failed
     return {
-      ...primaryResult,
+      ...primary,
       fallbackUsed: true,
       fallbackOutcome: 'failure',
-      fallbackOriginalTitle: originalTitle,
+      fallbackOriginalTitle: fallbackTitle,
       fallbackError: fallbackError.message
     };
   }
@@ -329,10 +331,10 @@ export async function fetchMetadataWithFallback(primaryTitle, author, originalTi
     sources: [...(primaryResult?.sources || []), ...(fallbackResult?.sources || [])].filter(Boolean),
     fallbackUsed: true,
     fallbackOutcome: 'success',
-    fallbackOriginalTitle: originalTitle,
+    fallbackOriginalTitle: fallbackTitle,
     fallbackSupplied: {
-      categories: needsCategories && fallbackResult.categories?.length,
-      cover: fallbackResult.coverUrls?.length
+      categories: Boolean(needsCategories && fallbackResult.categories?.length),
+      cover: Boolean(fallbackResult.coverUrls?.length)
     }
   };
 }

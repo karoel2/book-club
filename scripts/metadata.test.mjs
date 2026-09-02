@@ -42,9 +42,12 @@ test('skips fallback when original title is absent or equal to stored title', as
     return Response.json({ numFound: 0, docs: [] });
   };
   try {
-    await fetchMetadataWithFallback('Same title', 'Author', 'Same title');
-    await fetchMetadataWithFallback('No original', 'Author', null);
-    assert.equal(requests.some((url) => url.includes('Same%20title') && url.includes('No%20original')), false);
+    const sameTitle = await fetchMetadataWithFallback('Same title', 'Author', 'Same title');
+    const noTitle = await fetchMetadataWithFallback('No original', 'Author', null);
+    const whitespaceTitle = await fetchMetadataWithFallback('Whitespace', 'Author', '   ');
+    assert.equal(sameTitle?.fallbackUsed, undefined);
+    assert.equal(noTitle?.fallbackUsed, undefined);
+    assert.equal(whitespaceTitle?.fallbackUsed, undefined);
   } finally {
     globalThis.fetch = originalFetch;
   }

@@ -44,7 +44,7 @@ export const TEST_BOOK = {
 /** Expected fallback result merging primary empty with original rich */
 export const EXPECTED_MERGED_RESULT = {
   description: null, // Must remain null from primary
-  categories: ['Fiction', 'Time travel', 'End of the world'], // From fallback, capped at 3
+  categories: ['Fiction', 'Time travel', 'End of the world'], // From fallback, within the four-item cap
   isbn: '9788379437924', // From primary
   coverUrls: [
     'https://example.com/polish-cover.jpg',
