@@ -8,7 +8,10 @@ import {
   htmlToText,
   buildNextMeeting,
   serializeNextMeeting,
+  readingsFor,
 } from './next-meeting.mjs';
+
+const readings = (line) => readingsFor(parseNextBookEmail(line)).map((r) => `${r.title}|${r.author || ''}`);
 
 /* ----------------------------- the book line ---------------------------- */
 
@@ -141,4 +144,20 @@ test('serialises to valid, re-readable JSON', () => {
   assert.equal(round.checkedAt, '2026-08-19');
   assert.equal(round.availability.storytel.available, true);
   assert.equal(round.availability.legimi.available, null);
+});
+
+test('an ambiguous line asks about the real splits before the whole header', () => {
+  // The whole header carries no author, so it is confirmed on token overlap
+  // alone — "My, Zamiatin" matches a book *about* the novel. It must go last.
+  const r = readings('My, Jewgienij Zamiatin');
+  assert.equal(r[0], 'My|Jewgienij Zamiatin');
+  assert.equal(r.at(-1), 'My, Jewgienij Zamiatin|');
+});
+
+test('a settled split is still asked about first', () => {
+  assert.equal(readings('Wiedźmin, A. Sapkowski')[0], 'Wiedźmin|A. Sapkowski');
+});
+
+test('a comma-bearing title with no author still resolves to itself', () => {
+  assert.ok(readings('Dziki, mroczny brzeg').includes('Dziki, mroczny brzeg|'));
 });

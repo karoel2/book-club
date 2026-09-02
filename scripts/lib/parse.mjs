@@ -34,6 +34,13 @@ export function memberKey(s) {
 // phone UI chrome ("V IsN •", "SG R", "+", "111") never does.
 const WORD_RE = /\p{Lu}?\p{Ll}{2,}/u;
 
+// A header side may be a legitimately short title ("My", "Ja", "It"), which
+// WORD_RE — tuned to reject phone chrome, and so demanding three letters —
+// throws away. Candidates are confirmed against a book database before anything
+// is published, so this only has to be strict enough to keep OCR debris ("V•",
+// a stray "X") from costing an API call.
+const TITLE_RE = /\p{L}{2,}/u;
+
 // "Karol - 6", "Zosia -" (took part, left no number), and the legacy "Zosia - 8F".
 // The F marked someone who came via the film; the number is still their score,
 // so only the letter is dropped. The club has stopped writing it — recognising
@@ -147,7 +154,7 @@ function headerCandidates(text, header) {
   const push = (title, author) => {
     const t = (title || '').trim();
     const a = (author || '').trim() || null;
-    if (!t || !WORD_RE.test(t)) return;
+    if (!t || !TITLE_RE.test(t)) return;
     if (out.some((c) => c.title === t && c.author === a)) return;
     out.push({ title: t, author: a });
   };
@@ -347,6 +354,7 @@ export function serializeBooks(books) {
       `    "author": ${b.author == null ? 'null' : JSON.stringify(b.author)}`,
       `    "scores": { ${scores} }`,
     ];
+    if (b.originalTitle) lines.push(`    "originalTitle": ${JSON.stringify(b.originalTitle)}`);
     if (b.categories && b.categories.length) lines.push(`    "categories": ${JSON.stringify(b.categories)}`);
     if (b.description) lines.push(`    "description": ${JSON.stringify(b.description)}`);
     return `  {\n${lines.join(',\n')}\n  }`;

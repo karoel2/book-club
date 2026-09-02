@@ -3,14 +3,31 @@ import Base from '../layouts/Base.astro';
 import BookRow from '../components/BookRow.astro';
 import BookCover from '../components/BookCover.astro';
 import ProviderTag from '../components/ProviderTag.astro';
-import { getBooks } from '../data/books';
+import { getBooks, getLeaderboard, type LeaderboardCategory } from '../data/books';
 import { getNextMeeting } from '../data/next-meeting';
+import { url } from '../lib/url';
 
 const books = getBooks();
 const count = books.length;
 
 // Set by email or `npm run next` — see src/data/next-meeting.json.
 const nextMeeting = getNextMeeting();
+
+// User statistics leaderboard data
+const categories: { key: LeaderboardCategory; label: string }[] = [
+  { key: 'activity', label: 'Najwięcej ocen' },
+  { key: 'streak', label: 'Najdłuższa seria' },
+  { key: 'lowest-average', label: 'Najniższa średnia' },
+  { key: 'highest-average', label: 'Najwyższa średnia' }
+];
+
+const leaderboards = categories.map(category => ({
+  ...category,
+  entries: getLeaderboard(category.key)
+}));
+
+// Check if we have any valid user grades for statistics
+const hasUserStatistics = leaderboards.some(lb => lb.entries.length > 0);
 ---
 
 <Base title="Klub Książki — Ranking">
@@ -44,12 +61,53 @@ const nextMeeting = getNextMeeting();
         </div>
       </div>
     </div>}
-    
+
     <p class="next-meeting-text">Wszystkie {count} książek, które razem przeczytaliśmy:</p>
-    
+
     <ol class="leaderboard" role="list">
       {books.map((book, i) => <BookRow book={book} rank={i + 1} />)}
     </ol>
+
+    {/* User Statistics Section */}
+    <section class="user-stats-section" aria-labelledby="user-stats-heading">
+      <h2 id="user-stats-heading" class="user-stats-title">Statystyki członków</h2>
+
+      {hasUserStatistics ? (
+        <div class="stats-grid">
+           {leaderboards.map(category => (
+            <div class="stat-category">
+              <h3 class="stat-category-title">{category.label}</h3>
+              <ol class="stat-ranking" role="list" aria-label={`Ranking ${category.label.toLowerCase()}`}>
+                {category.entries.slice(0, 5).map(entry => (
+                  <li class:list={[
+                    'stat-entry',
+                    entry.isLeader && 'is-leader',
+                    !entry.isLeader && entry.rank === 2 && 'is-silver',
+                    !entry.isLeader && entry.rank === 3 && 'is-bronze',
+                  ]}>
+                    <a class="stat-link" href={url(`/members/${entry.user.slug}`)} aria-label={`${entry.user.name}, ${entry.rank}. miejsce, ${category.key === 'activity' ? entry.user.ratedCount : category.key === 'streak' ? entry.user.longestStreak : entry.user.averageLabel}${entry.isLeader ? ', lider rankingu' : ''}`}>
+                      <span class="stat-rank" aria-hidden="true">{entry.rank}.</span>
+                      <span class="stat-name">{entry.user.name}</span>
+                      {entry.isLeader && <span class="leader-badge" aria-label="Lider">👑</span>}
+                      {!entry.isLeader && entry.rank === 2 && <span class="leader-badge" aria-label="Drugie miejsce">🥈</span>}
+                      {!entry.isLeader && entry.rank === 3 && <span class="leader-badge" aria-label="Trzecie miejsce">🥉</span>}
+                      <span class="stat-value">
+                        {category.key === 'activity' && entry.user.ratedCount}
+                        {category.key === 'highest-average' && entry.user.averageLabel}
+                        {category.key === 'lowest-average' && entry.user.averageLabel}
+                        {category.key === 'streak' && entry.user.longestStreak}
+                      </span>
+                    </a>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p class="stats-empty">Statystyki pojawią się, gdy członkowie zaczną oceniać książki.</p>
+      )}
+    </section>
   </main>
 
   <footer class="site-footer container">
@@ -70,28 +128,28 @@ const nextMeeting = getNextMeeting();
   .site-footer .divider {
     margin-bottom: 1.5rem;
   }
-  
+
   .next-meeting-section {
     margin-bottom: 2rem;
     padding-bottom: 1.5rem;
     border-bottom: 1px solid var(--line);
   }
-  
+
   .next-meeting-text {
     text-align: center;
     color: var(--muted);
     margin: 2rem 0 1.5rem;
     font-size: 1.1rem;
   }
-  
+
   .next-meeting-book {
     opacity: 0.9;
   }
-  
+
   .next-meeting-row {
     list-style: none;
   }
-  
+
   .next-meeting-link {
     display: flex;
     align-items: center;
@@ -110,7 +168,7 @@ const nextMeeting = getNextMeeting();
     text-align: center;
     font-weight: 600;
   }
-  
+
   .next-meeting-meta {
     display: flex;
     flex-direction: column;
@@ -120,7 +178,7 @@ const nextMeeting = getNextMeeting();
     justify-content: center;
     max-width: calc(100% - 8rem); /* Prevent meta from taking too much space */
   }
-  
+
   .next-meeting-title {
     font-family: var(--font-serif);
     font-size: clamp(1.05rem, 2.6vw, 1.3rem);
@@ -128,7 +186,7 @@ const nextMeeting = getNextMeeting();
     line-height: 1.2;
     color: var(--ink);
   }
-  
+
   .next-meeting-sub {
     color: var(--muted);
     font-size: 0.88rem;
@@ -180,11 +238,156 @@ const nextMeeting = getNextMeeting();
     align-items: center;
     gap: 0.25rem;
   }
-  
+
   .next-meeting-label {
     font-size: 0.7rem;
     color: var(--muted);
     text-align: center;
     line-height: 1.2;
+  }
+
+  /* User Statistics Styles */
+  .user-stats-section {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 2px solid var(--line-strong);
+  }
+
+  .user-stats-title {
+    font-size: 1.6rem;
+    margin-bottom: 1.5rem;
+    text-align: center;
+    color: var(--ink);
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .stat-category {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+  }
+
+  .stat-category-title {
+    font-size: 1.1rem;
+    margin: 0 0 1rem 0;
+    color: var(--ink);
+    border-bottom: 1px solid var(--line-strong);
+    padding-bottom: 0.5rem;
+  }
+
+  .stat-ranking {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .stat-entry {
+    border-bottom: 1px solid var(--line);
+    padding: 0.5rem 0;
+  }
+
+  .stat-entry:last-child {
+    border-bottom: none;
+  }
+
+  .stat-entry.is-leader {
+    background: linear-gradient(90deg, rgba(255,215,0,0.1) 0%, transparent 100%);
+    border: 4px solid #d4a72c;
+    border-radius: var(--radius-sm);
+    padding: 0.5rem;
+    margin: 0;
+  }
+
+  .stat-entry.is-silver {
+    border: 4px solid #87939f;
+    border-radius: var(--radius-sm);
+    background: linear-gradient(90deg, rgba(174, 184, 194, 0.16), transparent);
+    padding: 0.5rem;
+    margin: 0;
+  }
+
+  .stat-entry.is-bronze {
+    border: 4px solid #b66f3c;
+    border-radius: var(--radius-sm);
+    background: linear-gradient(90deg, rgba(196, 138, 98, 0.14), transparent);
+    padding: 0.5rem;
+    margin: 0;
+  }
+
+  .stat-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.4rem 0.5rem;
+    border-radius: var(--radius-sm);
+    transition: background 0.15s ease;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .stat-link:hover {
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+  }
+
+  .stat-rank {
+    font-weight: 600;
+    color: var(--muted);
+    min-width: 1.8rem;
+    text-align: right;
+  }
+
+  .stat-name {
+    font-weight: 500;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .stat-link:hover .stat-name {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .stat-value {
+    font-weight: 600;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+
+  .leader-badge {
+    color: gold;
+    font-size: 1.1rem;
+    margin-left: 0.25rem;
+  }
+
+  .stats-empty {
+    text-align: center;
+    color: var(--muted);
+    font-style: italic;
+    margin: 2rem 0;
+  }
+
+  @media (max-width: 38rem) {
+    .stats-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .stat-link {
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .stat-rank {
+      text-align: left;
+    }
   }
 </style>

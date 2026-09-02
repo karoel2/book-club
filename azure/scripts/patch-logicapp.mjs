@@ -170,23 +170,29 @@ if (!ingestCall) {
   }
 }
 
-// The Logic App Function action can return 403 when the function app has
-// authLevel=function but no managed-identity connection. Convert those calls
-// to ordinary authenticated HTTP actions when the provisioner supplies the
-// host key. The key is passed through the environment and never committed.
+// Consumption Logic App Function actions can return 403 when the function app
+// uses authLevel=function without a managed-identity connection. When supplied
+// by the provisioner, use the host key with a normal HTTP action instead.
 const functionHost = process.env.FUNCTION_HOST;
 const functionKey = process.env.FUNCTION_KEY;
 if (functionHost && functionKey) {
   const convertFunctionCall = (action) => {
     const id = action.inputs?.function?.id;
-    if (!id || !/\/functions\/(ingest|next-book)$/i.test(id)) return;
+    if (!id) {
+      if (action.type === 'Http' && /\/api\/(ingest|next-book)\?/i.test(action.inputs?.uri || '')) {
+        action.inputs.headers = { ...(action.inputs.headers || {}), 'x-functions-key': functionKey };
+        note('refreshed the Function key on an HTTP call');
+      }
+      return;
+    }
+    if (!/\/functions\/(ingest|next-book)$/i.test(id)) return;
     const functionName = id.match(/\/functions\/(ingest|next-book)$/i)[1];
     const { method = 'POST', headers = {}, body } = action.inputs;
     action.type = 'Http';
     action.inputs = {
       method,
       uri: `${functionHost}/api/${functionName}?code=${encodeURIComponent(functionKey)}`,
-      headers,
+       headers: { ...headers, 'x-functions-key': functionKey },
       body,
     };
     note(`converted ${functionName} to authenticated HTTP`);

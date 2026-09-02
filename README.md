@@ -22,7 +22,8 @@ Everything lives in **[`src/data/books.json`](src/data/books.json)** — one obj
 {
   "title": "Chirurg",
   "author": "Tess Gerritsen",     // use null when unknown -> shows "Autor nieznany"
-  "scores": { "Asia": 5, "Michał": 9, "Zosia": 7 }
+  "scores": { "Asia": 5, "Michał": 9, "Zosia": 7 },
+  "originalTitle": "The Surgeon" // optional original-language lookup key
   // a score of null = took part but left no number -> shown as "—", excluded from the average
 }
 ```
@@ -73,7 +74,9 @@ Add `--strict` to send anything with any warning to review.
 ## Book descriptions, categories & covers
 
 Enrichment uses **Google Books** (best Polish descriptions + categories) with
-**Open Library** as a fallback and for higher-resolution covers (by ISBN). It's
+**Open Library** as a fallback and for higher-resolution covers (by ISBN). When
+`originalTitle` is present, it may supply missing categories and cover candidates;
+its description is never used. It's
 best-effort — if nothing is found the book is still added, just without extras.
 No API key is needed; set `GOOGLE_BOOKS_API_KEY` if you ever hit the daily limit.
 
