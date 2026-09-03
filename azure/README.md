@@ -82,7 +82,8 @@ App settings it manages: `VISION_ENDPOINT`, `VISION_KEY`, `GITHUB_TOKEN`,
 To deploy code only:
 ```bash
 cd azure && source deployment.local.sh
-npm install && npm run sync && func azure functionapp publish "$FN" --build remote
+# --javascript: local.settings.json is git-ignored, so func can't infer the runtime
+npm install && npm run sync && func azure functionapp publish "$FN" --build remote --javascript
 ```
 
 Invoke URL + key:

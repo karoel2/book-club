@@ -213,7 +213,19 @@ async function main() {
     // contains a comma resolves to itself.
     for (const p of all) {
       if (!p.ambiguous || !p.blocking.length) continue;
-      const hit = await resolveHeader(p.candidates);
+      let hit = null;
+      try {
+        hit = await resolveHeader(p.candidates);
+      } catch (e) {
+        // Google Books over its daily quota with nothing from Open Library is
+        // the one failure resolveHeader reports: no reading was really checked.
+        // The header stays ambiguous and goes to review, the way it did before
+        // we asked at all — one unchecked header must not abort the whole batch.
+        // Anything else is a bug in the lookup, and silently sending every book
+        // to review would hide it.
+        if (!e?.quota) throw e;
+        log(`      ⚠ Nie udało się sprawdzić nagłówka w bazach: ${e.message}`);
+      }
       if (!hit) continue;
       applyHeaderResolution(p, hit);
       log(`      · rozpoznano w bazie: „${hit.title}" — ${hit.author || 'bez autora'}`);
