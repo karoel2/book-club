@@ -1,15 +1,15 @@
 {
-  "title": "Problem trzech ciał",
-  "author": "Cixin Liu",
-  "cover": "problem-trzech-cial",
-  "date": "25/08/26",
+  "title": "My",
+  "author": "Jewgienij Zamiatin",
+  "cover": "my",
+  "date": "08/09/26",
   "time": "18:00",
-  "checkedAt": "2026-08-25",
+  "checkedAt": "2026-09-03",
   "availability": {
-    "storytel": { "available": true, "url": "https://www.storytel.com/pl/books/12416128" },
-    "bookbeat": { "available": false, "url": "https://www.bookbeat.com/pl/search?query=Problem%20trzech%20cia%C5%82" },
-    "audioteka": { "available": true, "url": "https://audioteka.com/pl/audiobook/problem-trzech-cial/" },
-    "legimi": { "available": true, "url": "https://www.legimi.pl/ebook-wspomnienie-o-przeszlosci-ziemi-problem-trzech-cial-liu-cixin,b173281.html" },
-    "biblioteka_raczynskich": { "available": true, "url": "https://omnis-br.primo.exlibrisgroup.com/discovery/search?query=any,contains,Problem%20trzech%20cia%C5%82&tab=LibraryCatalog&search_scope=MyInstitution2&vid=48OMNIS_BRP:BRACZ&offset=0" }
+    "storytel": { "available": true, "url": "https://www.storytel.com/pl/books/9120975" },
+    "bookbeat": { "available": true, "url": "https://www.bookbeat.com/pl/book/1398031" },
+    "audioteka": { "available": true, "url": "https://audioteka.com/pl/audiobook/my-97d32e8e/" },
+    "legimi": { "available": false, "url": "https://www.legimi.pl/ebook-love-me-my-dear-martyna-keller,b1175543.html" },
+    "biblioteka_raczynskich": { "available": true, "url": "https://omnis-br.primo.exlibrisgroup.com/discovery/search?query=any,contains,My&tab=LibraryCatalog&search_scope=MyInstitution2&vid=48OMNIS_BRP:BRACZ&offset=0" }
   }
 }
