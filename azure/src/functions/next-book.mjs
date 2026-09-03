@@ -113,6 +113,7 @@ app.http('next-book', {
       if (requiresConfirmation(parsed)) {
         return reply({ refused: true, title, summary: `⚠️ Nie udało się sprawdzić „${title}": ${e.message}` });
       }
+      warnings.push(`Nie udało się sprawdzić w bazach książek (${e.message}) — zapisuję tak, jak w mailu.`);
     }
 
     let previous;

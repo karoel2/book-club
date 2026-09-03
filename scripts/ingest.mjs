@@ -213,7 +213,15 @@ async function main() {
     // contains a comma resolves to itself.
     for (const p of all) {
       if (!p.ambiguous || !p.blocking.length) continue;
-      const hit = await resolveHeader(p.candidates);
+      let hit = null;
+      try {
+        hit = await resolveHeader(p.candidates);
+      } catch (e) {
+        // Databases unreachable (Google's daily quota). The header stays
+        // ambiguous and goes to review, the way it did before we asked at all —
+        // one unanswerable header must not abort the whole batch.
+        log(`      ⚠ Nie udało się sprawdzić nagłówka w bazach: ${e.message}`);
+      }
       if (!hit) continue;
       applyHeaderResolution(p, hit);
       log(`      · rozpoznano w bazie: „${hit.title}" — ${hit.author || 'bez autora'}`);

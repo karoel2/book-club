@@ -82,6 +82,17 @@ function tokenOverlap(a, b) {
   return ta.filter((t) => sb.has(t)).length / ta.length;
 }
 
+// Does a result's author carry the surname we asked for? A plain substring test
+// is right for a long surname — it is what lets an inflected form through
+// ("Zamiatina", "Orwella") — but on a short one it matches inside an unrelated
+// name: on an ambiguous header like "We, Yevgeny Zamyatin" the reversed reading
+// asks for the surname "We", which `includes` finds in "Wells", so a book *about*
+// the novel wins. Below four characters, demand a whole word.
+function surnameIn(resAuthor, sur) {
+  if (sur.length >= 4) return resAuthor.includes(sur);
+  return resAuthor === sur || resAuthor.startsWith(`${sur} `) || resAuthor.endsWith(` ${sur}`) || resAuthor.includes(` ${sur} `);
+}
+
 // Accept a candidate only when we're reasonably sure it's the same book.
 function accept(qTitle, qAuthor, resTitle, resAuthors) {
   const nt = norm(qTitle);
@@ -91,7 +102,7 @@ function accept(qTitle, qAuthor, resTitle, resAuthors) {
   const overlap = tokenOverlap(nt, nr);
   if (qAuthor) {
     const sur = norm(authorSurname(qAuthor));
-    const authorMatch = sur.length > 1 && (resAuthors || []).some((a) => norm(a).includes(sur));
+    const authorMatch = sur.length > 1 && (resAuthors || []).some((a) => surnameIn(norm(a), sur));
     return authorMatch && (titleClose || overlap >= 0.5);
   }
   // No author to disambiguate on — demand a strong title match.
@@ -237,18 +248,26 @@ export async function fetchMetadata(title, author, { reportErrors = false } = {}
  * Books is rate-limited without a key.
  */
 export async function resolveHeader(candidates, { limit = 5 } = {}) {
+  let quotaErr = null;
   for (const c of (candidates || []).slice(0, limit)) {
     let meta = null;
     try {
       meta = await fetchMetadata(c.title, c.author);
-    } catch {
+    } catch (e) {
       // fetchMetadata only throws when Google hit its quota *and* Open Library
       // had nothing. That says this reading is unknown, not that the next one
       // is — keep going, or a quota day would block every ambiguous header.
+      if (e?.quota) quotaErr = e;
       continue;
     }
     if (meta) return { title: c.title, author: c.author, meta };
   }
+  // Nothing confirmed *and* Google was never actually asked: on a quota day the
+  // gate is running on Open Library alone, which is thin on Polish editions. Say
+  // so rather than returning the same null as "this is not a book" — the caller
+  // turns that null into "Nie rozpoznałem książki", which sends the sender off
+  // to re-check a title that was right all along.
+  if (quotaErr) throw quotaErr;
   return null;
 }
 

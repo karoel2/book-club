@@ -74,7 +74,15 @@ app.http('ingest', {
     // a comma resolves to itself, so it no longer costs a human's attention.
     for (const p of parsed) {
       if (!p.ambiguous || !p.blocking.length) continue;
-      const hit = await resolveHeader(p.candidates);
+      let hit = null;
+      try {
+        hit = await resolveHeader(p.candidates);
+      } catch (e) {
+        // Databases unreachable (Google's daily quota). The header stays
+        // ambiguous and goes to review, the way it did before we asked at all —
+        // one unanswerable header must not fail the whole mail.
+        context.warn(`ingest: header resolution failed: ${e.message}`);
+      }
       if (!hit) continue;
       applyHeaderResolution(p, hit);
       p.resolvedMeta = hit.meta; // reuse below; don't fetch the same book twice
