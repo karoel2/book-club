@@ -102,6 +102,22 @@ test('an ordinary lookup failure stays a null, not a throw', async () => {
   assert.equal(hit, null);
 });
 
+test('an unexpected error is not filed as "no such book"', async () => {
+  // No HTTP failure can produce this — the providers swallow their own — so the
+  // candidate itself throws. The point is that resolveHeader doesn't turn a bug
+  // into the null its callers read as "not found".
+  const candidate = {
+    author: 'Nikt',
+    get title() {
+      throw new Error('boom');
+    },
+  };
+  await assert.rejects(
+    () => withStubbedApis({ docs: [] }, () => resolveHeader([candidate])),
+    /boom/,
+  );
+});
+
 test('a confirmed reading wins even when a later one would hit the quota', async () => {
   const docs = [{ title: 'Rok 1984', author_name: ['George Orwell'] }];
   const google = () => new Response('quota', { status: 429 });

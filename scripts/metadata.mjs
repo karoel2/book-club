@@ -254,19 +254,23 @@ export async function resolveHeader(candidates, { limit = 5 } = {}) {
     try {
       meta = await fetchMetadata(c.title, c.author);
     } catch (e) {
-      // fetchMetadata only throws when Google hit its quota *and* Open Library
-      // had nothing. That says this reading is unknown, not that the next one
-      // is — keep going, or a quota day would block every ambiguous header.
-      if (e?.quota) quotaErr = e;
+      // Asked but not answered: Google refused the query on its quota and Open
+      // Library had nothing. That says this reading is unconfirmed, not that the
+      // next one is — keep going, or a quota day would block every ambiguous
+      // header. Anything else is a bug in the lookup, and a caller reading the
+      // null it would become as "not found" is exactly how it would stay hidden.
+      if (!e?.quota) throw e;
+      quotaErr = e;
       continue;
     }
     if (meta) return { title: c.title, author: c.author, meta };
   }
-  // Nothing confirmed *and* Google was never actually asked: on a quota day the
-  // gate is running on Open Library alone, which is thin on Polish editions. Say
-  // so rather than returning the same null as "this is not a book" — the caller
-  // turns that null into "Nie rozpoznałem książki", which sends the sender off
-  // to re-check a title that was right all along.
+  // Nothing confirmed, and at least one reading went unasked — Google answered
+  // 429 to the query rather than answering it, so the gate was running on Open
+  // Library alone, which is thin on Polish editions. Say so rather than
+  // returning the same null as "this is not a book": the caller turns that null
+  // into "Nie rozpoznałem książki", which sends the sender off to re-check a
+  // title that was right all along.
   if (quotaErr) throw quotaErr;
   return null;
 }
