@@ -217,9 +217,10 @@ async function main() {
       try {
         hit = await resolveHeader(p.candidates);
       } catch (e) {
-        // Databases unreachable (Google's daily quota). The header stays
-        // ambiguous and goes to review, the way it did before we asked at all —
-        // one unanswerable header must not abort the whole batch.
+        // The only throw resolveHeader makes: Google Books hit its daily quota
+        // and Open Library matched nothing, so no reading was really checked.
+        // The header stays ambiguous and goes to review, the way it did before
+        // we asked at all — one unchecked header must not abort the whole batch.
         log(`      ⚠ Nie udało się sprawdzić nagłówka w bazach: ${e.message}`);
       }
       if (!hit) continue;

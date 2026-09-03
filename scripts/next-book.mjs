@@ -108,9 +108,9 @@ async function main() {
       try {
         hit = await resolveHeader(readingsFor(parsed));
       } catch (e) {
-        // The databases couldn't be asked (Google's daily quota, Open Library
-        // down). That is "unchecked", not "not a book" — don't report it as a
-        // rejected title.
+        // The only throw resolveHeader makes: Google Books hit its daily quota
+        // and Open Library matched nothing. That is "unchecked", not "not a
+        // book" — don't report it as a rejected title.
         lookupErr = e;
       }
       if (hit) {
