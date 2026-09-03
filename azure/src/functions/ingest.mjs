@@ -78,11 +78,14 @@ app.http('ingest', {
       try {
         hit = await resolveHeader(p.candidates);
       } catch (e) {
-        // The only throw resolveHeader makes: Google Books hit its daily quota
-        // and Open Library matched nothing, so no reading was really checked.
+        // Google Books over its daily quota with nothing from Open Library is
+        // the one failure resolveHeader reports: no reading was really checked.
         // The header stays ambiguous and goes to review, the way it did before
         // we asked at all — one unchecked header must not fail the whole mail.
-        context.warn(`ingest: header resolution failed: ${e.message}`);
+        // Anything else is a bug in the lookup, and silently sending every book
+        // to review would hide it.
+        if (!e?.quota) throw e;
+        context.warn(`ingest: header lookup hit the Google Books quota: ${e.message}`);
       }
       if (!hit) continue;
       applyHeaderResolution(p, hit);

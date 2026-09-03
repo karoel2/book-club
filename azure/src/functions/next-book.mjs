@@ -109,7 +109,12 @@ app.http('next-book', {
         warnings.push('Nie znalazłem tej książki w Google Books ani Open Library — zapisuję tak, jak w mailu.');
       }
     } catch (e) {
-      context.warn(`next-book: header resolution failed: ${e.message}`);
+      // Google Books over its daily quota with nothing from Open Library is the
+      // one failure resolveHeader reports. Anything else is a bug: let it 500
+      // and fail the Logic App run, rather than telling the sender their book
+      // couldn't be checked when the lookup never was the problem.
+      if (!e?.quota) throw e;
+      context.warn(`next-book: header lookup hit the Google Books quota: ${e.message}`);
       if (requiresConfirmation(parsed)) {
         return reply({ refused: true, title, summary: `⚠️ Nie udało się sprawdzić „${title}": ${e.message}` });
       }

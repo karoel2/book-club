@@ -108,9 +108,11 @@ async function main() {
       try {
         hit = await resolveHeader(readingsFor(parsed));
       } catch (e) {
-        // The only throw resolveHeader makes: Google Books hit its daily quota
-        // and Open Library matched nothing. That is "unchecked", not "not a
-        // book" — don't report it as a rejected title.
+        // Google Books over its daily quota with nothing from Open Library is
+        // the one failure resolveHeader reports, and it means "unchecked", not
+        // "not a book" — don't phrase it as a rejected title. Anything else is
+        // a bug in the lookup; let it surface instead of wearing this message.
+        if (!e?.quota) throw e;
         lookupErr = e;
       }
       if (hit) {

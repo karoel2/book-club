@@ -92,6 +92,16 @@ test('a quota day is reported as unchecked, not as an unknown book', async () =>
   );
 });
 
+test('an ordinary lookup failure stays a null, not a throw', async () => {
+  // The callers key their "unchecked" message off `err.quota` and rethrow the
+  // rest, so a plain HTTP error must not arrive as an exception.
+  const google = () => new Response('boom', { status: 500 });
+  const hit = await withStubbedApis({ google, docs: [] }, () =>
+    resolveHeader([{ title: 'Nieznana', author: 'Nikt Nikt' }]),
+  );
+  assert.equal(hit, null);
+});
+
 test('a confirmed reading wins even when a later one would hit the quota', async () => {
   const docs = [{ title: 'Rok 1984', author_name: ['George Orwell'] }];
   const google = () => new Response('quota', { status: 429 });
