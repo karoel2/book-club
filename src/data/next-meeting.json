@@ -1,15 +1,15 @@
 {
-  "title": "My",
-  "author": "Jewgienij Zamiatin",
-  "cover": "my",
-  "date": "08/09/26",
+  "title": "Dżuma",
+  "author": "Albert Camus",
+  "cover": "dzuma",
+  "date": "22/09/26",
   "time": "18:00",
-  "checkedAt": "2026-09-03",
+  "checkedAt": "2026-09-09",
   "availability": {
-    "storytel": { "available": true, "url": "https://www.storytel.com/pl/books/9120975" },
-    "bookbeat": { "available": true, "url": "https://www.bookbeat.com/pl/book/1398031" },
-    "audioteka": { "available": true, "url": "https://audioteka.com/pl/audiobook/my-97d32e8e/" },
-    "legimi": { "available": false, "url": "https://www.legimi.pl/ebook-love-me-my-dear-martyna-keller,b1175543.html" },
-    "biblioteka_raczynskich": { "available": true, "url": "https://omnis-br.primo.exlibrisgroup.com/discovery/search?query=any,contains,My&tab=LibraryCatalog&search_scope=MyInstitution2&vid=48OMNIS_BRP:BRACZ&offset=0" }
+    "storytel": { "available": true, "url": "https://www.storytel.com/pl/books/1087405" },
+    "bookbeat": { "available": true, "url": "https://www.bookbeat.com/pl/book/548053" },
+    "audioteka": { "available": true, "url": "https://audioteka.com/pl/audiobook/dzuma-ferency/" },
+    "legimi": { "available": true, "url": "https://www.legimi.pl/ebook-dzuma-albert-camus,b975968.html" },
+    "biblioteka_raczynskich": { "available": false, "url": "https://omnis-br.primo.exlibrisgroup.com/discovery/search?query=any,contains,D%C5%BCuma&tab=LibraryCatalog&search_scope=MyInstitution2&vid=48OMNIS_BRP:BRACZ&offset=0" }
   }
 }
