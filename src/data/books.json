@@ -127,5 +127,10 @@
     "scores": { "Sara": 8, "Paweł": 4, "Asia": 6, "Karolina": 7, "Zosia": 5, "Kasia": 4 },
     "categories": ["Fiction"],
     "description": "Napisane w następstwie rewolucji i przed pełną konsolidacją władzy totalitarnej, My jest jednym z założycielskich dzieł współczesnej fikcji dystopijnej.W szklanej i stalowej przyszłości, gdzie każde życie jest matematycznie regulowane, każda emocja monitorowana, a indywidualność traktowana jako choroba, inżynier D-503 zaczyna zapisywać swoje doskonałe szczęście – aż do momentu, gdy wkraczają miłość, wątpliwość i wolność. Z zimną precyzją i mroczną ironią Jewgienij Zamiatin odsłania wewnętrzną logikę absolutnej kontroli i delikatne człowieczeństwo, które ta kontrola próbuje wymazać.Opublikowane po raz pierwszy na emigracji i zakazywane przez dziesięciolecia, My pozostaje prorockim ostrzeżeniem i kamieniem węgielnym dwudziestowiecznej literatury politycznej."
+  },
+  {
+    "title": "\"Nowy, wspaniaty świat\"",
+    "author": "Aldous Huxley",
+    "scores": { "Sara": 7, "Paweł": 3, "Asia": 6, "Karolina": 5, "Kasia": 2 }
   }
 ]
