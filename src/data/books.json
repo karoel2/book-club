@@ -138,29 +138,29 @@
   {
     "title": "Dar Anomalii",
     "author": "P. Zbroszczyk",
-    "scores": {}
+    "scores": {  }
   },
   {
     "title": "Szczelina",
     "author": "Jozef Karika",
-    "scores": {},
-    "categories": ["Horror", "Psychological fiction"]
+    "scores": {  },
+    "categories": ["Horror","Psychological fiction"]
   },
   {
     "title": "Rok 1984",
     "author": "George Orwell",
-    "scores": {},
-    "categories": ["Dystopian fiction", "Political fiction", "Science fiction"]
+    "scores": {  },
+    "categories": ["Dystopian fiction","Political fiction","Science fiction"]
   },
   {
     "title": "Piękni, lśniący ludzie",
     "author": null,
-    "scores": {}
+    "scores": {  }
   },
   {
     "title": "Pomoc domowa",
     "author": "Freida McFadden",
-    "scores": {},
-    "categories": ["Psychological thriller", "Domestic thriller", "Mystery"]
+    "scores": {  },
+    "categories": ["Psychological thriller","Domestic thriller","Mystery"]
   }
 ]
