@@ -103,7 +103,18 @@ async function main() {
     for (const w of parsed.warnings) log(`  ⚠ ${w}`);
 
     if (VERIFY) {
-      const hit = await resolveHeader(readingsFor(parsed));
+      let hit = null;
+      let lookupErr = null;
+      try {
+        hit = await resolveHeader(readingsFor(parsed));
+      } catch (e) {
+        // Google Books over its daily quota with nothing from Open Library is
+        // the one failure resolveHeader reports, and it means "unchecked", not
+        // "not a book" — don't phrase it as a rejected title. Anything else is
+        // a bug in the lookup; let it surface instead of wearing this message.
+        if (!e?.quota) throw e;
+        lookupErr = e;
+      }
       if (hit) {
         if (hit.title !== title || (hit.author || null) !== author) {
           log(`  · rozpoznano w bazie: „${hit.title}" — ${hit.author || 'bez autora'}`);
@@ -115,9 +126,12 @@ async function main() {
         author = hit.author || author;
         meta = hit.meta;
       } else if (requiresConfirmation(parsed)) {
-        log(`✗ Nie znalazłem „${title}" w Google Books ani Open Library.`);
+        if (lookupErr) log(`✗ Nie udało się sprawdzić „${title}": ${lookupErr.message}`);
+        else log(`✗ Nie znalazłem „${title}" w Google Books ani Open Library.`);
         log('  Dopisz autora („Tytuł, Autor"), popraw tytuł, albo dodaj mimo to: --no-verify');
         process.exit(1);
+      } else if (lookupErr) {
+        log(`  ⚠ Nie udało się sprawdzić w bazach książek (${lookupErr.message}) — zapisuję tak, jak podałeś.`);
       } else {
         log('  ⚠ Nie potwierdzono w bazach książek — zapisuję tak, jak podałeś.');
       }
