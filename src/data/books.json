@@ -120,5 +120,44 @@
     "title": "Problem trzech ciał",
     "author": "Cixin Liu",
     "scores": { "Zosia": 6, "Asia": 6, "Karol": 8, "Sara": 4 }
+  },
+  {
+    "title": "My",
+    "author": "Jewgienij Zamiatin",
+    "scores": { "Sara": 8, "Paweł": 4, "Asia": 6, "Karolina": 7, "Zosia": 5, "Kasia": 4 },
+    "categories": ["Fiction"],
+    "description": "Napisane w następstwie rewolucji i przed pełną konsolidacją władzy totalitarnej, My jest jednym z założycielskich dzieł współczesnej fikcji dystopijnej.W szklanej i stalowej przyszłości, gdzie każde życie jest matematycznie regulowane, każda emocja monitorowana, a indywidualność traktowana jako choroba, inżynier D-503 zaczyna zapisywać swoje doskonałe szczęście – aż do momentu, gdy wkraczają miłość, wątpliwość i wolność. Z zimną precyzją i mroczną ironią Jewgienij Zamiatin odsłania wewnętrzną logikę absolutnej kontroli i delikatne człowieczeństwo, które ta kontrola próbuje wymazać.Opublikowane po raz pierwszy na emigracji i zakazywane przez dziesięciolecia, My pozostaje prorockim ostrzeżeniem i kamieniem węgielnym dwudziestowiecznej literatury politycznej."
+  },
+  {
+    "title": "\"Nowy, wspaniały świat\"",
+    "author": "Aldous Huxley",
+    "scores": { "Sara": 7, "Paweł": 3, "Asia": 6, "Karolina": 5, "Kasia": 2 },
+    "categories": ["Collectivism"],
+    "description": "\"Community, Identity, Stability\" is the motto of Aldous Huxley's utopian World State. Here everyone consumes daily grams of soma, to fight depression, babies are born in laboratories, and the most popular form of entertainment is a \"Feelie,\" a movie that stimulates the senses of sight, hearing, and touch. Though there is no violence and everyone is provided for, Bernard Marx feels something is missing and senses his relationship with a young women has the potential to be much more than the confines of their existence allow."
+  },
+  {
+    "title": "Dar Anomalii",
+    "author": "P. Zbroszczyk",
+    "scores": {}
+  },
+  {
+    "title": "Szczelina",
+    "author": "J. Karika",
+    "scores": {}
+  },
+  {
+    "title": "Rok 1984",
+    "author": "G. Orwell",
+    "scores": {}
+  },
+  {
+    "title": "Piękni, lśniący ludzie",
+    "author": null,
+    "scores": {}
+  },
+  {
+    "title": "Pomoc domowa",
+    "author": "F. McFadden",
+    "scores": {}
   }
 ]
