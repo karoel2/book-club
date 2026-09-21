@@ -1,22 +1,44 @@
 # Klub Książki — Book Club Archive
 
-A clean, no-accounts static site that ranks the books our club has read and shows
-every member's individual score. Built with [Astro](https://astro.build). UI in Polish.
+A clean, no-accounts static site for our book club. It ranks the books we have read,
+shows every member's individual scores, and provides member statistics and book detail
+pages. The UI is in Polish and the site is built with [Astro](https://astro.build).
+
+Live site: **[book-club.space](https://book-club.space)**
+
+The homepage also shows the next book and meeting details from
+[`src/data/next-meeting.json`](src/data/next-meeting.json), including where the book
+is available. The public site is static; all content is generated from files in the
+repository.
 
 See [vision.md](vision.md) for the product vision.
 
 ## Run it
+
+Requires Node.js and npm.
 
 ```bash
 npm install
 npm run dev        # http://localhost:4321
 npm run build      # static output in dist/
 npm run preview    # serve the built dist/ locally
+npm test            # run the parser and availability tests
 ```
+
+## Project structure
+
+- `src/pages/` — homepage, book detail pages, member pages, and the 404 page.
+- `src/components/` and `src/layouts/` — reusable Astro UI components.
+- `src/data/books.json` — book titles, authors, scores, and optional metadata.
+- `src/data/next-meeting.json` — the book and date shown in the next-meeting card.
+- `src/assets/covers/` — book cover images, matched by book slug.
+- `scripts/` — local ingestion, enrichment, availability checks, and their tests.
+- `azure/` — optional serverless email ingestion deployment.
 
 ## Add or edit a book
 
-Everything lives in **[`src/data/books.json`](src/data/books.json)** — one object per book:
+Everything lives in **[`src/data/books.json`](src/data/books.json)** — a JSON array with
+one object per book:
 
 ```jsonc
 {
@@ -259,8 +281,9 @@ also a shop, is held to.
 ## Hosting on GitHub Pages (free)
 
 Deployment is already wired up in `.github/workflows/deploy.yml`: every push to
-`main` builds the site and publishes it. The base path is derived from the repo
-name automatically, so there's nothing to edit.
+`main` builds the site and publishes it. The repository currently serves the site
+from the custom domain in [`CNAME`](CNAME), and `astro.config.mjs` is configured
+with `https://book-club.space` as the site URL.
 
 One-time setup (create an empty repo on GitHub first, then):
 
@@ -273,10 +296,8 @@ git push -u origin main
 ```
 
 Then on GitHub: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
-The site goes live at `https://<you>.github.io/<repo>/`.
-
-(Name the repo `<you>.github.io`, or attach a custom domain, and it serves from
-the root instead — the config handles both cases.)
+With the committed `CNAME` file and DNS configured for the domain, the site is
+available at `https://book-club.space/`.
 
 ## Data provenance
 
