@@ -142,13 +142,15 @@
   },
   {
     "title": "Szczelina",
-    "author": "J. Karika",
-    "scores": {}
+    "author": "Jozef Karika",
+    "scores": {},
+    "categories": ["Horror", "Psychological fiction"]
   },
   {
     "title": "Rok 1984",
-    "author": "G. Orwell",
-    "scores": {}
+    "author": "George Orwell",
+    "scores": {},
+    "categories": ["Dystopian fiction", "Political fiction", "Science fiction"]
   },
   {
     "title": "Piękni, lśniący ludzie",
@@ -157,7 +159,8 @@
   },
   {
     "title": "Pomoc domowa",
-    "author": "F. McFadden",
-    "scores": {}
+    "author": "Freida McFadden",
+    "scores": {},
+    "categories": ["Psychological thriller", "Domestic thriller", "Mystery"]
   }
 ]
