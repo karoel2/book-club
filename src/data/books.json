@@ -138,30 +138,32 @@
   {
     "title": "Dar Anomalii",
     "author": "P. Zbroszczyk",
-    "scores": {}
+    "scores": {  }
   },
   {
     "title": "Szczelina",
     "author": "Jozef Karika",
-    "scores": {},
-    "categories": ["Horror", "Psychological fiction"]
+    "scores": {  },
+    "categories": ["Horror","Psychological fiction"]
   },
   {
     "title": "Rok 1984",
     "author": "George Orwell",
-    "scores": {},
-    "categories": ["Dystopian fiction", "Political fiction", "Science fiction"]
+    "scores": {  },
+    "categories": ["Dystopian fiction","Political fiction","Science fiction"]
   },
   {
     "title": "Piękni, lśniący ludzie",
-    "author": null,
-    "scores": {}
+    "author": "Michael Grothaus",
+    "scores": {  },
+    "categories": ["Fiction"],
+    "description": "Nasz świat za kilkadziesiąt lat… …to zwykły świat, pełen autonomicznych samochodów, szybujących po niebie dronów i pracujących w burgerowniach robotów. Są dwa supermocarstwa, trwa cyfrowa zimna wojna, ale wszelkie konflikty rozgrywają się gdzieś tam, za oceanem… Ludzie budzą się, idą do pracy, jedzą kolację. Wszystko jest tak, jak być powinno. Ale nie dla siedemnastoletniego Johna, geniusza technologii, cudownego dziecka z rozbitej rodziny. John ma pewną tajemnicę. W jego życiu wszystko zaczyna się zmieniać, gdy pewnego chłodnego wieczora wchodzi do małego tokijskiego bistro prowadzonego przez byłego zapaśnika sumo. Mieszka tam osobliwy pies z kulistą głową wraz ze swoją właścicielką – enigmatyczną kelnerką Neotnią. Neotnia też coś ukrywa – sekret, który wywróci nieszczęśliwe życie Johna do góry nogami. Sekret, który przeniesie ich z neonowych ulic Tokio do tragicznej przeszłości Hiroszimy i zaśnieżonych gór Nagano. Sekret, który pokaże, że nasz świat wcale nie jest zwykły – i na zawsze go odmieni… *** Totalnie wciągająca od samego początku – opowieść, klimat i bohaterowie zostaną w twojej wyobraźni na długo po lekturze. Naprawdę cudowna – Jonathan Whitelaw Cudowna, wnikliwa i głęboka. Fascynujące studium człowieczeństwa w świecie, w którym wszystko można podrobić – James Oswald Skrzyżowanie cyberpunka z Bildungsroman – prawdziwa radość z czytania – Oscar de Muriel Wybitna! Fantastyka naukowa pokazująca, jak przeszłość może wpływać na przyszłość; po części opowieść o dojrzewaniu, po części historia miłosna, świetnie oddająca atmosferę Japonii – ta książka to migawka z przerażającej i bardzo prawdopodobnej przyszłości – Michael J. Malone"
   },
   {
     "title": "Pomoc domowa",
     "author": "Freida McFadden",
-    "scores": {},
-    "categories": ["Psychological thriller", "Domestic thriller", "Mystery"],
+    "scores": {  },
+    "categories": ["Psychological thriller","Domestic thriller","Mystery"],
     "description": "\"Światowy bestseller, miliony sprzedanych egzemplarzy. Historia tak mocna, że musiała trafić do kin. Każdego dnia Millie sprząta luksusową willę Winchesterów, odbiera ich córkę ze szkoły i przygotowuje rodzinną kolację. Potem samotnie wraca do swojego małego pokoju na poddaszu. Z pozoru życie Niny Winchester jest idealne: garderoba pełna markowych ubrań, szybki samochód, perfekcyjny mąż. Ale Millie widzi to, czego inni nie dostrzegają. Bałagan, który Nina tworzy dla własnej satysfakcji. Kłamstwa, które opowiada o swojej córce. Cienie, które coraz mocniej przygniatają Andrew Winchestera. Wystarczy jeden błąd. Jedna chwila słabości, gdy Millie spróbuje życia, które nigdy nie było jej. I wtedy fasada idealnej rodziny pęka. Drzwi pokoju na poddaszu zatrzaskują się. I można je otworzyć tylko od zewnątrz. Ale Winchesterowie nie wiedzą, kim naprawdę jest Millie. I nie mają pojęcia, do czego jest zdolna...\""
   }
 ]
