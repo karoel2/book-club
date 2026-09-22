@@ -108,8 +108,41 @@ function buildBook(raw: RawBook, usedSlugs: Set<string>, archiveIndex: number): 
   };
 }
 
+// The original import order was not the club's reading order. Keep the
+// reconstructed log explicit; entries added later but not in the log remain
+// after it in their existing order.
+const BOOK_LOG_ORDER = [
+  'Dar Anomalii',
+  'Szczelina',
+  'Rok 1984',
+  'Piękni, lśniący ludzie',
+  'Pomoc domowa',
+  'Chirurg',
+  'Kwiaty dla Algernona',
+  'Worek Kości',
+  'Nie ma tego złego',
+  'Droga do szczęścia',
+  'Śnieg przykryje',
+  'Achaja',
+  'Płonące Dziewczyny',
+  'Wyznania',
+  'Dziki, mroczny brzeg',
+  'Hail Mary',
+  'Pierwszych piętnaście żywotów Harrego Augusta',
+  'Wiedźmin',
+];
+const bookLogPosition = new Map(BOOK_LOG_ORDER.map((title, index) => [title, index]));
+const orderedBooksData = (booksData as RawBook[])
+  .map((raw, originalIndex) => ({ raw, originalIndex }))
+  .sort((a, b) => {
+    const aPosition = bookLogPosition.get(a.raw.title) ?? BOOK_LOG_ORDER.length;
+    const bPosition = bookLogPosition.get(b.raw.title) ?? BOOK_LOG_ORDER.length;
+    return aPosition - bPosition || a.originalIndex - b.originalIndex;
+  })
+  .map(({ raw }) => raw);
+
 const usedSlugs = new Set<string>();
-const books: Book[] = (booksData as RawBook[]).map((raw, index) => buildBook(raw, usedSlugs, index));
+const books: Book[] = orderedBooksData.map((raw, index) => buildBook(raw, usedSlugs, index));
 
 /** All books, sorted for the leaderboard: highest average first. */
 export function getBooks(): Book[] {
@@ -150,8 +183,8 @@ export interface UserStatistics {
   highestScore: number | null;
   /** lowest valid grade, or null when none */
   lowestScore: number | null;
-  /** longest consecutive grading streak in archive order */
-  longestStreak: number;
+  /** consecutive books rated from the end of the archive */
+  currentStreak: number;
   /** true only when ratedCount >= 3 for average ranking eligibility */
   averageEligible: boolean;
 }
@@ -235,7 +268,7 @@ export function getUserStatistics(name: string): UserStatistics {
       averageLabel: '—',
       highestScore: null,
       lowestScore: null,
-      longestStreak: 0,
+      currentStreak: 0,
       averageEligible: false
     };
   }
@@ -245,21 +278,14 @@ export function getUserStatistics(name: string): UserStatistics {
   const highestScore = Math.max(...validScores);
   const lowestScore = Math.min(...validScores);
 
-  // Calculate longest consecutive streak in archive order
-  let longestStreak = 0;
+  // The streak is only the current run, so an unrated latest book resets it.
   let currentStreak = 0;
-  let prevIndex = -1;
-
-  for (const rating of ratings) {
-    if (prevIndex === -1 || rating.archiveIndex === prevIndex + 1) {
-      currentStreak++;
-    } else {
-      longestStreak = Math.max(longestStreak, currentStreak);
-      currentStreak = 1;
-    }
-    prevIndex = rating.archiveIndex;
+  let expectedIndex = books.length - 1;
+  for (let i = ratings.length - 1; i >= 0; i -= 1) {
+    if (ratings[i].archiveIndex !== expectedIndex) break;
+    currentStreak += 1;
+    expectedIndex -= 1;
   }
-  longestStreak = Math.max(longestStreak, currentStreak);
 
   return {
     slug: getMemberSlug(name),
@@ -269,7 +295,7 @@ export function getUserStatistics(name: string): UserStatistics {
     averageLabel: formatScore(average),
     highestScore,
     lowestScore,
-    longestStreak,
+    currentStreak,
     averageEligible: ratedCount >= 3
   };
 }
@@ -338,7 +364,7 @@ export function getLeaderboard(category: LeaderboardCategory): LeaderboardEntry[
       sortedStats = [...eligibleStats].sort((a, b) => (a.average ?? 11) - (b.average ?? 11));
       break;
     case 'streak':
-      sortedStats = [...eligibleStats].sort((a, b) => b.longestStreak - a.longestStreak);
+      sortedStats = [...eligibleStats].sort((a, b) => b.currentStreak - a.currentStreak);
       break;
   }
 
@@ -368,7 +394,7 @@ function getLeaderValue(user: UserStatistics, category: LeaderboardCategory): nu
     case 'activity': return user.ratedCount;
     case 'highest-average': return user.average === null ? -1 : Math.round(user.average * 100) / 100;
     case 'lowest-average': return user.average === null ? 11 : Math.round(user.average * 100) / 100;
-    case 'streak': return user.longestStreak;
+    case 'streak': return user.currentStreak;
   }
 }
 

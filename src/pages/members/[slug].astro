@@ -60,9 +60,9 @@ const medalEmoji = (rank: number | undefined) =>
       <div class="member-stats-grid">
         <div class:list={['member-stat-card', medalClass(rankFor('streak'))]}>
           <span class="member-stat-icon" aria-hidden="true">🔥</span>
-          <span class="member-stat-label">Najdłuższa seria</span>
-          <strong class="member-stat-value">{stats.longestStreak} {medalEmoji(rankFor('streak'))}</strong>
-          <span class="member-stat-unit">{booksLabel(stats.longestStreak)}</span>
+          <span class="member-stat-label">Aktualna seria</span>
+          <strong class="member-stat-value">{stats.currentStreak} {medalEmoji(rankFor('streak'))}</strong>
+          <span class="member-stat-unit">{booksLabel(stats.currentStreak)}</span>
         </div>
         <div class="member-stat-card">
           <span class="member-stat-icon" aria-hidden="true">📊</span>
