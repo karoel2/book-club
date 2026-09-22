@@ -16,7 +16,7 @@ const nextMeeting = getNextMeeting();
 // User statistics leaderboard data
 const categories: { key: LeaderboardCategory; label: string }[] = [
   { key: 'activity', label: 'Najwięcej ocen' },
-  { key: 'streak', label: 'Najdłuższa seria' },
+  { key: 'streak', label: 'Aktualna seria' },
   { key: 'lowest-average', label: 'Najniższa średnia' },
   { key: 'highest-average', label: 'Najwyższa średnia' }
 ];
@@ -85,7 +85,7 @@ const hasUserStatistics = leaderboards.some(lb => lb.entries.length > 0);
                     !entry.isLeader && entry.rank === 2 && 'is-silver',
                     !entry.isLeader && entry.rank === 3 && 'is-bronze',
                   ]}>
-                    <a class="stat-link" href={url(`/members/${entry.user.slug}`)} aria-label={`${entry.user.name}, ${entry.rank}. miejsce, ${category.key === 'activity' ? entry.user.ratedCount : category.key === 'streak' ? entry.user.longestStreak : entry.user.averageLabel}${entry.isLeader ? ', lider rankingu' : ''}`}>
+                    <a class="stat-link" href={url(`/members/${entry.user.slug}`)} aria-label={`${entry.user.name}, ${entry.rank}. miejsce, ${category.key === 'activity' ? entry.user.ratedCount : category.key === 'streak' ? entry.user.currentStreak : entry.user.averageLabel}${entry.isLeader ? ', lider rankingu' : ''}`}>
                       <span class="stat-rank" aria-hidden="true">{entry.rank}.</span>
                       <span class="stat-name">{entry.user.name}</span>
                       {entry.isLeader && <span class="leader-badge" aria-label="Lider">👑</span>}
@@ -95,7 +95,7 @@ const hasUserStatistics = leaderboards.some(lb => lb.entries.length > 0);
                         {category.key === 'activity' && entry.user.ratedCount}
                         {category.key === 'highest-average' && entry.user.averageLabel}
                         {category.key === 'lowest-average' && entry.user.averageLabel}
-                        {category.key === 'streak' && entry.user.longestStreak}
+                        {category.key === 'streak' && entry.user.currentStreak}
                       </span>
                     </a>
                   </li>
