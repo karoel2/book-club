@@ -10,9 +10,10 @@
  *   Problem trzech ciał, Cixin Liu
  *   Problem trzech ciał, Cixin Liu, 25/08/26 18:00
  *
- * Splitting that line is the same problem the screenshot parser already solves
- * ("Dziki, mroczny brzeg" is one title, not a title and an author), so the
- * comma logic is reused from ./parse.mjs rather than re-guessed here.
+ * Email input always uses the explicit "title, author" order. The final comma
+ * separates those fields, so commas earlier in a title are preserved. The
+ * screenshot parser in ./parse.mjs has different ambiguity rules because it
+ * also handles title-only OCR headers.
  */
 
 import { splitTitleAuthor, slugify } from './parse.mjs';

@@ -157,6 +157,6 @@ test('a settled split is still asked about first', () => {
   assert.equal(readings('Wiedźmin, A. Sapkowski')[0], 'Wiedźmin|A. Sapkowski');
 });
 
-test('email input requires an author after the final comma', () => {
-  assert.equal(parseNextBookEmail('Dziki, mroczny brzeg').author, 'mroczny brzeg');
+test('email input rejects a missing author after the final comma', () => {
+  assert.equal(parseNextBookEmail('Dziki, mroczny brzeg,'), null);
 });
