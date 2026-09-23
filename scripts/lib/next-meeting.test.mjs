@@ -23,14 +23,14 @@ test('splits "Tytuł, Autor"', () => {
   assert.equal(r.time, null);
 });
 
-test('an initial marks the author whichever side it is on', () => {
+test('email input keeps the declared title-author order', () => {
   assert.deepEqual(
     (({ title, author }) => ({ title, author }))(parseNextBookEmail('Worek Kości, S. King')),
     { title: 'Worek Kości', author: 'S. King' },
   );
   assert.deepEqual(
     (({ title, author }) => ({ title, author }))(parseNextBookEmail('S. King, Worek Kości')),
-    { title: 'Worek Kości', author: 'S. King' },
+    { title: 'S. King', author: 'Worek Kości' },
   );
 });
 
@@ -40,10 +40,11 @@ test('a comma inside the title does not become an author', () => {
   assert.equal(r.author, 'C. McConaghy');
 });
 
-test('an undecidable split is flagged, not guessed', () => {
+test('email format treats the final comma as the title-author separator', () => {
   const r = parseNextBookEmail('Wyznania, Kanae Minato');
-  assert.equal(r.ambiguous, true);
-  assert.ok(r.candidates.some((c) => c.title === 'Wyznania' && c.author === 'Kanae Minato'));
+  assert.equal(r.title, 'Wyznania');
+  assert.equal(r.author, 'Kanae Minato');
+  assert.equal(r.ambiguous, false);
 });
 
 test('a title alone is accepted', () => {
@@ -146,18 +147,16 @@ test('serialises to valid, re-readable JSON', () => {
   assert.equal(round.availability.legimi.available, null);
 });
 
-test('an ambiguous line asks about the real splits before the whole header', () => {
-  // The whole header carries no author, so it is confirmed on token overlap
-  // alone — "My, Zamiatin" matches a book *about* the novel. It must go last.
-  const r = readings('My, Jewgienij Zamiatin');
-  assert.equal(r[0], 'My|Jewgienij Zamiatin');
-  assert.equal(r.at(-1), 'My, Jewgienij Zamiatin|');
+test('a comma in the email title stays in the title', () => {
+  const r = parseNextBookEmail('Miasto, którego nie ma, Jan Kowalski');
+  assert.equal(r.title, 'Miasto, którego nie ma');
+  assert.equal(r.author, 'Jan Kowalski');
 });
 
 test('a settled split is still asked about first', () => {
   assert.equal(readings('Wiedźmin, A. Sapkowski')[0], 'Wiedźmin|A. Sapkowski');
 });
 
-test('a comma-bearing title with no author still resolves to itself', () => {
-  assert.ok(readings('Dziki, mroczny brzeg').includes('Dziki, mroczny brzeg|'));
+test('email input requires an author after the final comma', () => {
+  assert.equal(parseNextBookEmail('Dziki, mroczny brzeg').author, 'mroczny brzeg');
 });

@@ -20,7 +20,7 @@ Jaśmin - 8
 Yumi i Malarz Koszmarów, B. Sanderson
 Zosia - 8
 Agata - 7
-Piotr - 7
+Piotr W. - 7
 Karol - 3
 Pawet - 7
 Asia - 5
@@ -30,7 +30,7 @@ Nicole - 5
 Pierwszych piętnaście żywotów Harrego
 Augusta, C. North
 Pawet - 8
-Piotr - 7
+Piotr W. - 7
 Nicole - 3
 Agata - 7
 Karol - 5
@@ -82,7 +82,7 @@ Jaśmin - 9
 Asia - 9
 Paulina - 10
 Kasia - 9
-Piotr - 8
+Piotr W. - 8
 Agata - 8
 Sara - 8
 8,77
@@ -144,4 +144,3 @@ Asia - 7
 Karol - 5
 Sara - 7
 6,4
-

@@ -193,8 +193,19 @@ export function parseNextBookEmail(body) {
   }
   if (!rest) return null;
 
-  const split = splitTitleAuthor([rest]);
-  if (!split.title) return null;
+  // Email format is explicit: the final comma separates the title from the
+  // author, so any earlier commas belong to the title.
+  const separator = rest.lastIndexOf(',');
+  const split = separator > 0
+    ? {
+        title: rest.slice(0, separator).trim(),
+        author: rest.slice(separator + 1).trim() || null,
+        ambiguous: false,
+        candidates: [],
+        warnings: [],
+      }
+    : splitTitleAuthor([rest]);
+  if (!split.title || !split.author && separator > 0) return null;
 
   return {
     title: split.title,
