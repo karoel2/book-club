@@ -66,6 +66,7 @@ test('mail that is not a book line is ignored', () => {
     '',
     '   ',
     'Cześć, jak leci?',
+    'Cześć, jak leci',
     'https://www.storytel.com/pl/books/12416128',
     'Wysyłam wam zdjęcia z ostatniego spotkania, dajcie znać co myślicie o tej książce i kiedy',
   ]) {

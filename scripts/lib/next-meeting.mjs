@@ -117,6 +117,14 @@ function decodeEntities(s) {
     .replace(/&([a-z]+);/gi, (m, name) => ENTITIES[name.toLowerCase()] ?? m);
 }
 
+// Email has a declared `title, author` shape. This small pre-filter keeps a
+// comma-separated sentence from reaching the update flow; book-database
+// confirmation remains the real validation step.
+function looksLikeEmailAuthor(author) {
+  const tokens = String(author || '').split(/\s+/).filter(Boolean);
+  return tokens.length >= 1 && tokens.length <= 5 && tokens.every((token) => /^\p{Lu}/u.test(token));
+}
+
 /** Outlook hands us an HTML body; we only ever want its first line of text. */
 export function htmlToText(html) {
   return decodeEntities(
@@ -207,6 +215,7 @@ export function parseNextBookEmail(body) {
       }
     : splitTitleAuthor([rest]);
   if (!split.title || !split.author && separator > 0) return null;
+  if (separator > 0 && !looksLikeEmailAuthor(split.author)) return null;
 
   return {
     title: split.title,
