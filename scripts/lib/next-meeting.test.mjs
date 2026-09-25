@@ -9,6 +9,7 @@ import {
   buildNextMeeting,
   serializeNextMeeting,
   readingsFor,
+  requiresConfirmation,
 } from './next-meeting.mjs';
 
 const readings = (line) => readingsFor(parseNextBookEmail(line)).map((r) => `${r.title}|${r.author || ''}`);
@@ -152,6 +153,14 @@ test('a comma in the email title stays in the title', () => {
   const r = parseNextBookEmail('Miasto, którego nie ma, Jan Kowalski');
   assert.equal(r.title, 'Miasto, którego nie ma');
   assert.equal(r.author, 'Jan Kowalski');
+  assert.equal(requiresConfirmation(r), true);
+  assert.deepEqual(r.candidates[0], { title: r.title, author: r.author });
+});
+
+test('email authors may contain lowercase name particles', () => {
+  const r = parseNextBookEmail('Miasto, którego nie ma, de la Cruz');
+  assert.equal(r.title, 'Miasto, którego nie ma');
+  assert.equal(r.author, 'de la Cruz');
 });
 
 test('a settled split is still asked about first', () => {

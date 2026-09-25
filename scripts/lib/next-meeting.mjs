@@ -117,12 +117,19 @@ function decodeEntities(s) {
     .replace(/&([a-z]+);/gi, (m, name) => ENTITIES[name.toLowerCase()] ?? m);
 }
 
+const NAME_PARTICLES = new Set(['al', 'bin', 'da', 'de', 'del', 'della', 'den', 'der', 'di', 'i', 'la', 'of', 'ter', 'ten', 'van', 'von', 'y', 'z', 'ze']);
+
 // Email has a declared `title, author` shape. This small pre-filter keeps a
 // comma-separated sentence from reaching the update flow; book-database
 // confirmation remains the real validation step.
 function looksLikeEmailAuthor(author) {
   const tokens = String(author || '').split(/\s+/).filter(Boolean);
-  return tokens.length >= 1 && tokens.length <= 5 && tokens.every((token) => /^\p{Lu}/u.test(token));
+  return (
+    tokens.length >= 1 &&
+    tokens.length <= 5 &&
+    tokens.some((token) => /^\p{Lu}/u.test(token)) &&
+    tokens.every((token) => /^\p{Lu}/u.test(token) || NAME_PARTICLES.has(token.toLowerCase()))
+  );
 }
 
 /** Outlook hands us an HTML body; we only ever want its first line of text. */
@@ -179,7 +186,7 @@ function looksLikeBookLine(line) {
  * Turn an email body into the next-meeting fields, or null when the mail isn't
  * one of these at all (empty, a link, a paragraph of prose).
  *
- * Returns `{ title, author, date, time, ambiguous, candidates, warnings }`.
+ * Returns `{ title, author, date, time, ambiguous, candidates, requiresConfirmation, warnings }`.
  * `date`/`time` are null unless the line carried them; `candidates` are the
  * readings for the caller to confirm against a book database when the comma
  * split is a coin toss (see resolveHeader in ../metadata.mjs).
@@ -210,7 +217,8 @@ export function parseNextBookEmail(body) {
         title: rest.slice(0, separator).trim(),
         author: rest.slice(separator + 1).trim() || null,
         ambiguous: false,
-        candidates: [],
+        candidates: [{ title: rest.slice(0, separator).trim(), author: rest.slice(separator + 1).trim() || null }],
+        requiresConfirmation: true,
         warnings: [],
       }
     : splitTitleAuthor([rest]);
@@ -224,6 +232,7 @@ export function parseNextBookEmail(body) {
     time: when?.time ?? null,
     ambiguous: !!split.ambiguous,
     candidates: split.candidates || [],
+    requiresConfirmation: !!split.requiresConfirmation,
     warnings: split.warnings || [],
   };
 }
@@ -268,7 +277,7 @@ export function readingsFor(parsed) {
  * refusing it would mean an unlucky rate-limit day silently swallows the mail.
  */
 export function requiresConfirmation(parsed) {
-  return !parsed.author || parsed.ambiguous;
+  return parsed.requiresConfirmation || !parsed.author || parsed.ambiguous;
 }
 
 /* ------------------------------ the record ----------------------------- */
