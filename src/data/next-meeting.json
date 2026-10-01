@@ -1,15 +1,15 @@
 {
-  "title": "Dżuma",
-  "author": "Albert Camus",
-  "cover": "dzuma",
-  "date": "22/09/26",
+  "title": "Schronisko, które przestało istnieć",
+  "author": "S. Gortych",
+  "cover": "schronisko-ktore-przestalo-istniec",
+  "date": "06/10/26",
   "time": "18:00",
-  "checkedAt": "2026-09-21",
+  "checkedAt": "2026-10-01",
   "availability": {
-    "storytel": { "available": true, "url": "https://www.storytel.com/pl/books/1087405" },
-    "bookbeat": { "available": true, "url": "https://www.bookbeat.com/pl/book/548053" },
-    "audioteka": { "available": true, "url": "https://audioteka.com/pl/audiobook/dzuma-ferency/" },
-    "legimi": { "available": true, "url": "https://www.legimi.pl/ebook-dzuma-albert-camus,b975968.html" },
-    "biblioteka_raczynskich": { "available": false, "url": "https://omnis-br.primo.exlibrisgroup.com/discovery/search?query=any,contains,D%C5%BCuma&tab=LibraryCatalog&search_scope=MyInstitution2&vid=48OMNIS_BRP:BRACZ&offset=0" }
+    "storytel": { "available": false, "url": "https://www.storytel.com/pl/search-Schronisko%20kt%C3%B3re%20przesta%C5%82o%20istnie%C4%87" },
+    "bookbeat": { "available": false, "url": "https://www.bookbeat.com/pl/search?query=Schronisko%20kt%C3%B3re%20przesta%C5%82o%20istnie%C4%87" },
+    "audioteka": { "available": true, "url": "https://audioteka.com/pl/audiobook/schronisko-ktore-przestalo-istniec/" },
+    "legimi": { "available": true, "url": "https://www.legimi.pl/ebook-schronisko-ktore-przestalo-istniec-slawek-gortych,b892928.html" },
+    "biblioteka_raczynskich": { "available": false, "url": "https://omnis-br.primo.exlibrisgroup.com/discovery/search?query=any,contains,Schronisko%2C%20kt%C3%B3re%20przesta%C5%82o%20istnie%C4%87&tab=LibraryCatalog&search_scope=MyInstitution2&vid=48OMNIS_BRP:BRACZ&offset=0" }
   }
 }
