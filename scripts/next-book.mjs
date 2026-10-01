@@ -153,7 +153,15 @@ async function main() {
     log(`  ${mark} ${label}${why}`);
   }
 
-  const entry = buildNextMeeting({ title, author, date, time, availability }, previous);
+  const entry = buildNextMeeting({
+    title,
+    author,
+    date,
+    time,
+    availability,
+    description: meta?.description,
+    categories: meta?.categories,
+  }, previous);
   log(`  📅 ${entry.date} ${entry.time}${date ? '' : '  (domyślnie: za dwa tygodnie, wtorek)'}`);
 
   if (COVER && !DRY && !hasCover(entry.cover)) {

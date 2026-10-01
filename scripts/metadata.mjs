@@ -168,16 +168,30 @@ async function fromGoogle(title, author) {
 }
 
 async function fromOpenLibrary(title, author) {
-  const q = encodeURIComponent([title, author].filter(Boolean).join(' '));
-  let data;
-  try {
-    data = await getJson(
-      `https://openlibrary.org/search.json?q=${q}&fields=title,author_name,subject,isbn,cover_i,key&limit=5`,
-    );
-  } catch {
-    return null;
+  // Initials in the mail often do not match the catalogue's full author name
+  // closely enough for a combined Open Library query. Keep the strict match,
+  // but retry with the surname, then the title alone before declaring the book
+  // unknown.
+  const surname = authorSurname(author);
+  const queries = [...new Set([
+    [title, author].filter(Boolean).join(' '),
+    [title, surname].filter(Boolean).join(' '),
+    title,
+  ])];
+  let hit;
+  for (const query of queries) {
+    let data;
+    try {
+      const q = encodeURIComponent(query);
+      data = await getJson(
+        `https://openlibrary.org/search.json?q=${q}&fields=title,author_name,subject,isbn,cover_i,key&limit=5`,
+      );
+    } catch {
+      continue;
+    }
+    hit = (data.docs || []).find((d) => accept(title, author, d.title || '', d.author_name));
+    if (hit) break;
   }
-  const hit = (data.docs || []).find((d) => accept(title, author, d.title || '', d.author_name));
   if (!hit) return null;
 
   let description = null;

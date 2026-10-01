@@ -127,6 +127,33 @@ test('a confirmed reading wins even when a later one would hit the quota', async
   assert.equal(hit?.title, 'Rok 1984');
 });
 
+test('retries Open Library by surname when an abbreviated author gives no result', async () => {
+  const requests = [];
+  const docs = [{ title: 'Schronisko, które przestało istnieć', author_name: ['Sławek Gortych'], cover_i: 14821543 }];
+  const result = await withStubbedApis({ docs: [] }, async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async (url) => {
+      const u = String(url);
+      requests.push(u);
+      if (u.includes('googleapis.com')) return Response.json({ items: [] });
+      if (u.includes('openlibrary.org/search.json')) {
+        return u.includes(encodeURIComponent('Schronisko, które przestało istnieć S. Gortych'))
+          ? Response.json({ numFound: 0, docs: [] })
+          : Response.json({ numFound: 1, docs });
+      }
+      return Response.json({});
+    };
+    try {
+      return await (await import('./metadata.mjs')).fetchMetadata('Schronisko, które przestało istnieć', 'S. Gortych');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+  assert.equal(result?.sources.includes('Open Library'), true);
+  assert.ok(result?.coverUrls.some((url) => url.includes('14821543')));
+  assert.equal(requests.filter((url) => url.includes('openlibrary.org/search.json')).length, 2);
+});
+
 test('skips fallback when original title is absent or equal to stored title', async () => {
   const originalFetch = globalThis.fetch;
   const requests = [];

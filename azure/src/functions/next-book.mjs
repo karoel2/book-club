@@ -146,7 +146,15 @@ app.http('next-book', {
       if (availability[id]?.error) warnings.push(`${label}: nie udało się sprawdzić (${availability[id].error})`);
     }
 
-    const entry = buildNextMeeting({ title, author, date, time, availability }, previous);
+    const entry = buildNextMeeting({
+      title,
+      author,
+      date,
+      time,
+      availability,
+      description: meta?.description,
+      categories: meta?.categories,
+    }, previous);
     if (!date) warnings.push('Bez daty w mailu — ustawiłem za dwa tygodnie, we wtorek.');
 
     context.log(

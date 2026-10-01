@@ -50,6 +50,7 @@ const hasUserStatistics = leaderboards.some(lb => lb.entries.length > 0);
               <span class="next-meeting-title">{nextMeeting.title}</span>
               <span class="next-meeting-sub">{nextMeeting.author}</span>
               <div class="provider-tags">
+                {nextMeeting.categories.map((category) => <span class="next-meeting-category">{category}</span>)}
                 {nextMeeting.providers.map((provider) => <ProviderTag provider={provider} />)}
               </div>
             </span>
@@ -229,6 +230,17 @@ const hasUserStatistics = leaderboards.some(lb => lb.entries.length > 0);
     flex-wrap: wrap;
     gap: 0.3rem;
     margin-top: 0.35rem;
+  }
+
+  .next-meeting-category {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.5rem;
+    padding: 0.15rem 0.45rem;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    color: var(--muted);
+    font-size: 0.72rem;
   }
 
   .next-meeting-cover {

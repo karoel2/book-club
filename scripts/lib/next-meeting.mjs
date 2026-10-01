@@ -287,11 +287,13 @@ export function requiresConfirmation(parsed) {
  * keep sensible values rather than being blanked: the time carries over from
  * the previous meeting, and the date advances from the scheduled date.
  */
-export function buildNextMeeting({ title, author, date, time, availability, cover }, previous = {}, now = new Date()) {
+export function buildNextMeeting({ title, author, date, time, availability, cover, description, categories }, previous = {}, now = new Date()) {
   return {
     title,
     author: author || null,
     cover: cover || slugify(title),
+    description: description || previous.description || null,
+    categories: categories?.length ? categories : (previous.categories || []),
     date: date || defaultMeetingDate(previous),
     time: time || previous.time || DEFAULT_TIME,
     checkedAt: availability ? todayInWarsaw(now).toISOString().slice(0, 10) : (previous.checkedAt ?? null),
@@ -312,6 +314,8 @@ export function serializeNextMeeting(entry) {
       `  "title": ${JSON.stringify(entry.title)},`,
       `  "author": ${entry.author == null ? 'null' : JSON.stringify(entry.author)},`,
       `  "cover": ${JSON.stringify(entry.cover)},`,
+      `  "categories": ${JSON.stringify(entry.categories || [])},`,
+      `  "description": ${entry.description == null ? 'null' : JSON.stringify(entry.description)},`,
       `  "date": ${JSON.stringify(entry.date)},`,
       `  "time": ${JSON.stringify(entry.time)},`,
       `  "checkedAt": ${entry.checkedAt == null ? 'null' : JSON.stringify(entry.checkedAt)},`,

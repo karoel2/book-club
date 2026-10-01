@@ -10,6 +10,8 @@ export interface RawNextMeeting {
   author: string | null;
   /** cover slug: src/assets/covers/<cover>.(jpg|png|…), placeholder if absent */
   cover: string;
+  description: string | null;
+  categories: string[];
   /** dd/mm/yy, as shown on the card */
   date: string;
   /** HH:MM */
@@ -35,6 +37,8 @@ export interface NextMeeting {
   title: string;
   author: string | null;
   cover: string;
+  description: string | null;
+  categories: string[];
   date: string;
   time: string;
   checkedAt: string | null;
@@ -72,6 +76,8 @@ export function getNextMeeting(): NextMeeting | null {
     title: raw.title,
     author: raw.author ?? null,
     cover: raw.cover,
+    description: raw.description ?? null,
+    categories: raw.categories ?? [],
     date: raw.date,
     time: raw.time,
     checkedAt: raw.checkedAt ?? null,
