@@ -1,17 +1,15 @@
 {
-  "title": "Schronisko, które przestało istnieć",
-  "author": "S. Gortych",
-  "cover": "schronisko-ktore-przestalo-istniec",
-  "categories": ["Kryminał"],
-  "description": "Maksymilian Rajczakowski przyjeżdża w Karkonosze, by poznać tajemnice schroniska, które spłonęło po II wojnie światowej. Gdy zaczyna własne śledztwo, otrzymuje pogróżki od kogoś, kto podaje się za Ducha Gór.",
-  "date": "06/10/26",
+  "title": "Przemiana",
+  "author": "F. Kafka",
+  "cover": "przemiana",
+  "date": "20/10/26",
   "time": "18:00",
-  "checkedAt": "2026-10-01",
+  "checkedAt": "2026-10-08",
   "availability": {
-    "storytel": { "available": false, "url": "https://www.storytel.com/pl/search-Schronisko%20kt%C3%B3re%20przesta%C5%82o%20istnie%C4%87" },
-    "bookbeat": { "available": false, "url": "https://www.bookbeat.com/pl/search?query=Schronisko%20kt%C3%B3re%20przesta%C5%82o%20istnie%C4%87" },
-    "audioteka": { "available": true, "url": "https://audioteka.com/pl/audiobook/schronisko-ktore-przestalo-istniec/" },
-    "legimi": { "available": true, "url": "https://www.legimi.pl/ebook-schronisko-ktore-przestalo-istniec-slawek-gortych,b892928.html" },
-    "biblioteka_raczynskich": { "available": false, "url": "https://omnis-br.primo.exlibrisgroup.com/discovery/search?query=any,contains,Schronisko%2C%20kt%C3%B3re%20przesta%C5%82o%20istnie%C4%87&tab=LibraryCatalog&search_scope=MyInstitution2&vid=48OMNIS_BRP:BRACZ&offset=0" }
+    "storytel": { "available": true, "url": "https://www.storytel.com/pl/books/2967318" },
+    "bookbeat": { "available": true, "url": "https://www.bookbeat.com/pl/book/1703043" },
+    "audioteka": { "available": true, "url": "https://audioteka.com/pl/audiobook/przemiana-miasto-ksiazek/" },
+    "legimi": { "available": true, "url": "https://www.legimi.pl/ebook-przemiana-franz-kafka,b64608.html" },
+    "biblioteka_raczynskich": { "available": false, "url": "https://omnis-br.primo.exlibrisgroup.com/discovery/search?query=any,contains,Przemiana.&tab=LibraryCatalog&search_scope=MyInstitution2&vid=48OMNIS_BRP:BRACZ&offset=0" }
   }
 }
