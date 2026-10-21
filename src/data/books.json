@@ -177,5 +177,12 @@
     "title": "Przemiana",
     "author": "F. Kafka",
     "scores": { "Nicole": 7, "Paulina": 5, "Asia": 7, "Piotr": 6, "Karol": 5, "Bartek": 6, "Jaśmin": 8, "Sara": 5 }
+  },
+  {
+    "title": "Dżuma",
+    "author": "A. Camus",
+    "scores": { "Piotr": 9, "Kasia": 4, "Karol": 7, "Jaśmin": 8, "Zosia": 7, "Sara": 6 },
+    "categories": ["Fiction"],
+    "description": "Albert Camus (ur. 7 listopada 1913 w Mondovi, zm. 4 stycznia 1960 w Villeblevin) - francuski pisarz, dramaturg, eseista i rezyser teatralny. Urodzony w Algierii francuskiej, tworzyl swoje dziela glownie we Francji. Jest czolowym reprezentantem egzystencjalizmu w literaturze i uwaza sie go za jednego z najwybitniejszych intelektualistow Europy w II polowie XX wieku. Byl laureatem Nagrody Nobla w dziedzinie literatury w 1957."
   }
 ]
