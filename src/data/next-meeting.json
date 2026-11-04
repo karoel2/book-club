@@ -1,17 +1,17 @@
 {
-  "title": "Klara i Słońce",
-  "author": "K. Ishiguro",
-  "cover": "klara-i-slonce",
+  "title": "Zmora",
+  "author": "R. Małecki",
+  "cover": "zmora",
   "categories": ["Artificial intelligence"],
   "description": null,
-  "date": "03/11/26",
+  "date": "17/11/26",
   "time": "18:00",
-  "checkedAt": "2026-11-03",
+  "checkedAt": "2026-11-04",
   "availability": {
-    "storytel": { "available": true, "url": "https://www.storytel.com/pl/books/15113330" },
-    "bookbeat": { "available": true, "url": "https://www.bookbeat.com/pl/book/2091530" },
-    "audioteka": { "available": true, "url": "https://audioteka.com/pl/audiobook/klara-i-slonce/" },
-    "legimi": { "available": true, "url": "https://www.legimi.pl/ebook-klara-i-slonce-kazuo-ishiguro,b651248.html" },
-    "biblioteka_raczynskich": { "available": true, "url": "https://omnis-br.primo.exlibrisgroup.com/discovery/search?query=any,contains,Klara%20i%20s%C5%82o%C5%84ce&tab=LibraryCatalog&search_scope=MyInstitution2&vid=48OMNIS_BRP:BRACZ&offset=0" }
+    "storytel": { "available": true, "url": "https://www.storytel.com/pl/books/11496601" },
+    "bookbeat": { "available": false, "url": "https://www.bookbeat.com/pl/book/1167741" },
+    "audioteka": { "available": true, "url": "https://audioteka.com/pl/audiobook/zmora-wydawnictwo-literackie/" },
+    "legimi": { "available": true, "url": "https://www.legimi.pl/ebook-zmora-robert-malecki,b1402412.html" },
+    "biblioteka_raczynskich": { "available": false, "url": "https://omnis-br.primo.exlibrisgroup.com/discovery/search?query=any,contains,Zmora&tab=LibraryCatalog&search_scope=MyInstitution2&vid=48OMNIS_BRP:BRACZ&offset=0" }
   }
 }
